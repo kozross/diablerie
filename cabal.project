@@ -1,0 +1,4 @@
+packages: ./linterieur.cabal
+
+package linterieur
+  ghc-options: -Werror

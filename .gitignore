@@ -1,0 +1,9 @@
+*/.nvimrc
+.cabal
+dist
+dist-newstyle
+.ghc.environment.*
+cabal.project.local*
+.stack-work
+stack.yaml.lock
+cabal.project.local~
