@@ -1,6 +1,11 @@
 module Main (main) where
 
-import Data.ByteArray.Interieur (findFirstByte, findFirstByteIn)
+import Data.ByteArray.Interieur
+  ( findFirstByte,
+    findFirstByteIn,
+    findLastByte,
+    findLastByteIn,
+  )
 import qualified Data.ByteString as BS
 import Data.Primitive.ByteArray (ByteArray)
 import GHC.Exts (fromListN, toList)
@@ -22,7 +27,8 @@ main = withFile "./bench-data/big.txt" ReadMode go
 runAllTests :: ByteArray -> IO ()
 runAllTests asBA =
   defaultMain
-    [ bgroup "findFirstByte (wrapped)" . ffbTests $ asBA
+    [ bgroup "findFirstByte (wrapped)" . ffbTests $ asBA,
+      bgroup "findLastByte (wrapped)" . flbTests $ asBA
     ]
 
 ffbTests :: ByteArray -> [Benchmark]
@@ -44,5 +50,27 @@ ffbTests asBA =
     bcompare "$NF == \"findFirstByteIn, wrapped\""
       . bench "findFirstByteIn, naive"
       . nf (Naive.findFirstByteIn asBA 3000000 2000000)
+      $ 0x5a
+  ]
+
+flbTests :: ByteArray -> [Benchmark]
+flbTests asBA =
+  [ testCase "findLastByte, wrapped, correctness"
+      . assertEqual "findLastByte" (Naive.findLastByte asBA 0x5a)
+      . findLastByte asBA
+      $ 0x5a,
+    bench "findLastByte, wrapped" . nf (findLastByte asBA) $ 0x5a,
+    bcompare "$NF == \"findLastByte, wrapped\""
+      . bench "findLastByte, naive"
+      . nf (Naive.findLastByte asBA)
+      $ 0x5a,
+    testCase "findLastByteIn, wrapped, correctness"
+      . assertEqual "findLastByteIn" (Naive.findLastByteIn asBA 3000000 2000000 0x5a)
+      . findLastByteIn asBA 3000000 2000000
+      $ 0x5a,
+    bench "findLastByteIn, wrapped" . nf (findLastByteIn asBA 3000000 2000000) $ 0x5a,
+    bcompare "$NF == \"findLastByteIn, wrapped\""
+      . bench "findLastByteIn, naive"
+      . nf (Naive.findLastByteIn asBA 3000000 2000000)
       $ 0x5a
   ]
