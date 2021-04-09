@@ -47,8 +47,8 @@ it _absolutely_ clear what can and cannot happen with our functions.
 ### Low dependencies
 
 We see this library as a cog in many future machines, and don't want to ask
-people to carry around dependencies outside of [boot packages](). Thus, we will
-avoid included non-boot packages as dependencies unless absolutely necessary.
+people to carry around dependencies outside of [boot packages](https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/libraries/version-history). Thus, we will
+avoid depending on non-boot packages unless absolutely necessary.
 Furthermore, the packages we aim to use should not introduce transitive
 dependencies (again, unless absolutely necessary).
 
