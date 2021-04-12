@@ -15,7 +15,7 @@
 --
 -- No bounds checking (or indeed, checking of any prerequisites) is done by any
 -- of these functions. Use with care.
-module Data.ByteArray.Interieur
+module Data.Interieur.ByteArray
   ( -- * Wrapped operations
     findFirstByte,
     findFirstByteIn,

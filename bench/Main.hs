@@ -1,12 +1,12 @@
 module Main (main) where
 
-import Data.ByteArray.Interieur
+import qualified Data.ByteString as BS
+import Data.Interieur.ByteArray
   ( findFirstByte,
     findFirstByteIn,
     findLastByte,
     findLastByteIn,
   )
-import qualified Data.ByteString as BS
 import Data.Primitive.ByteArray (ByteArray)
 import GHC.Exts (fromListN, toList)
 import qualified Naive

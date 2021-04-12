@@ -30,7 +30,7 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Data.ByteArray.Interieur
+  exposed-modules: Data.Interieur.ByteArray
   build-depends:
     , base       >=4.12    && <5
     , primitive  ^>=0.7.1.0
@@ -39,7 +39,12 @@ library
     cbits/find-first-byte.c
     cbits/find-last-byte.c
 
-  cc-options:      -O2
+  if os(macos)
+    cc-options: -O2 -DLINTERIEUR_MAC
+
+  else
+    cc-options: -O2
+
   hs-source-dirs:  src
 
 benchmark benches
