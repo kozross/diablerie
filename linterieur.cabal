@@ -39,7 +39,7 @@ library
     cbits/find-first-byte.c
     cbits/find-last-byte.c
 
-  if os(macos)
+  if os(darwin)
     cc-options: -O2 -DLINTERIEUR_MAC
 
   else
