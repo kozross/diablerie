@@ -34,14 +34,13 @@ import Data.Primitive.ByteArray
   ( ByteArray (ByteArray),
     sizeofByteArray,
   )
+import Foreign.C.Types (CPtrdiff (CPtrdiff))
 import GHC.Exts
   ( ByteArray#,
     Int (I#),
     Int#,
-    isTrue#,
     sizeofByteArray#,
     word2Int#,
-    (<#),
   )
 import GHC.Word (Word8 (W8#))
 
@@ -78,10 +77,10 @@ findFirstByte ba = findFirstByteIn ba 0 (sizeofByteArray ba)
 -- @since 1.0.0
 findFirstByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findFirstByteIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
-  let res# = findFirstByteIn# ba# off# len# (word2Int# w8#)
-   in if isTrue# (res# <# 0#)
-        then Nothing
-        else Just (I# res#)
+  let (CPtrdiff res) = findFirstByteIn# ba# off# len# (word2Int# w8#)
+   in case signum res of
+        (-1) -> Nothing
+        _ -> Just . fromIntegral $ res
 
 -- | A convenience wrapper for searching the entire 'ByteArray'. More precisely,
 -- @findLastByte ba w8@ is the same as @'findLastByteIn' ba 0 ('sizeofByteArray'
@@ -114,10 +113,10 @@ findLastByte ba = findLastByteIn ba 0 (sizeofByteArray ba)
 -- @since 1.0.0
 findLastByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findLastByteIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
-  let res# = findLastByteIn# ba# off# len# (word2Int# w8#)
-   in if isTrue# (res# <# 0#)
-        then Nothing
-        else Just (I# res#)
+  let (CPtrdiff res) = findLastByteIn# ba# off# len# (word2Int# w8#)
+   in case signum res of
+        (-1) -> Nothing
+        _ -> Just . fromIntegral $ res
 
 -- Raw ops
 
@@ -126,7 +125,7 @@ findLastByteIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
 -- ('sizeofByteArray# ba) w8@.
 --
 -- @since 1.0.0
-findFirstByte# :: ByteArray# -> Int# -> Int#
+findFirstByte# :: ByteArray# -> Int# -> CPtrdiff
 findFirstByte# ba# = findFirstByteIn# ba# 0# (sizeofByteArray# ba#)
 
 -- | A convenience wrapper for searching the entire 'ByteArray#'. More
@@ -134,7 +133,7 @@ findFirstByte# ba# = findFirstByteIn# ba# 0# (sizeofByteArray# ba#)
 -- ('sizeofByteArray# ba) w8@.
 --
 -- @since 1.0.0
-findLastByte# :: ByteArray# -> Int# -> Int#
+findLastByte# :: ByteArray# -> Int# -> CPtrdiff
 findLastByte# ba# = findLastByteIn# ba# 0# (sizeofByteArray# ba#)
 
 -- | Searches a byte array from an offset for the index of the
@@ -173,7 +172,7 @@ foreign import ccall unsafe "find_first_byte"
     -- | What byte to match (only low 8 bits)
     Int# ->
     -- | Location as index, or -1 if not found
-    Int#
+    CPtrdiff
 
 -- | Searches a byte array from an offset for the index of the
 -- last occurrence of a byte.
@@ -214,4 +213,4 @@ foreign import ccall unsafe "find_last_byte"
     -- | What byte to match (only low 8 bits)
     Int# ->
     -- | Location as index, or -1 if not found
-    Int#
+    CPtrdiff

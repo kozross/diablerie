@@ -8,6 +8,7 @@ import Data.Interieur.ByteArray
     findLastByteIn,
   )
 import Data.Primitive.ByteArray (ByteArray)
+import Data.Word (Word8)
 import GHC.Exts (fromListN, toList)
 import qualified Naive
 import System.IO (Handle, IOMode (ReadMode), withFile)
@@ -24,6 +25,9 @@ main = withFile "./bench-data/big.txt" ReadMode go
 
 -- Helpers
 
+everyByte :: [Word8]
+everyByte = [minBound .. maxBound]
+
 runAllTests :: ByteArray -> IO ()
 runAllTests asBA =
   defaultMain
@@ -34,43 +38,43 @@ runAllTests asBA =
 ffbTests :: ByteArray -> [Benchmark]
 ffbTests asBA =
   [ testCase "findFirstByte, wrapped, correctness"
-      . assertEqual "findFirstByte" (Naive.findFirstByte asBA 0x5a)
-      . findFirstByte asBA
-      $ 0x5a,
-    bench "findFirstByte, wrapped" . nf (findFirstByte asBA) $ 0x5a,
+      . assertEqual "findFirstByte" (Naive.findFirstByte asBA <$> everyByte)
+      . fmap (findFirstByte asBA)
+      $ everyByte,
+    bench "findFirstByte, wrapped" . nf (fmap (findFirstByte asBA)) $ everyByte,
     bcompare "$NF == \"findFirstByte, wrapped\""
       . bench "findFirstByte, naive"
-      . nf (Naive.findFirstByte asBA)
-      $ 0x5a,
+      . nf (fmap (Naive.findFirstByte asBA))
+      $ everyByte,
     testCase "findFirstByteIn, wrapped, correctness"
-      . assertEqual "findFirstByteIn" (Naive.findFirstByteIn asBA 3000000 2000000 0x5a)
-      . findFirstByteIn asBA 3000000 2000000
-      $ 0x5a,
-    bench "findFirstByteIn, wrapped" . nf (findFirstByteIn asBA 3000000 2000000) $ 0x5a,
+      . assertEqual "findFirstByteIn" (Naive.findFirstByteIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (findFirstByteIn asBA 3000000 2000000)
+      $ everyByte,
+    bench "findFirstByteIn, wrapped" . nf (fmap (findFirstByteIn asBA 3000000 2000000)) $ everyByte,
     bcompare "$NF == \"findFirstByteIn, wrapped\""
       . bench "findFirstByteIn, naive"
-      . nf (Naive.findFirstByteIn asBA 3000000 2000000)
-      $ 0x5a
+      . nf (fmap (Naive.findFirstByteIn asBA 3000000 2000000))
+      $ everyByte
   ]
 
 flbTests :: ByteArray -> [Benchmark]
 flbTests asBA =
   [ testCase "findLastByte, wrapped, correctness"
-      . assertEqual "findLastByte" (Naive.findLastByte asBA 0x5a)
-      . findLastByte asBA
-      $ 0x5a,
-    bench "findLastByte, wrapped" . nf (findLastByte asBA) $ 0x5a,
+      . assertEqual "findLastByte" (Naive.findLastByte asBA <$> everyByte)
+      . fmap (findLastByte asBA)
+      $ everyByte,
+    bench "findLastByte, wrapped" . nf (fmap (findLastByte asBA)) $ everyByte,
     bcompare "$NF == \"findLastByte, wrapped\""
       . bench "findLastByte, naive"
-      . nf (Naive.findLastByte asBA)
-      $ 0x5a,
+      . nf (fmap (Naive.findLastByte asBA))
+      $ everyByte,
     testCase "findLastByteIn, wrapped, correctness"
-      . assertEqual "findLastByteIn" (Naive.findLastByteIn asBA 3000000 2000000 0x5a)
-      . findLastByteIn asBA 3000000 2000000
-      $ 0x5a,
-    bench "findLastByteIn, wrapped" . nf (findLastByteIn asBA 3000000 2000000) $ 0x5a,
+      . assertEqual "findLastByteIn" (Naive.findLastByteIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (findLastByteIn asBA 3000000 2000000)
+      $ everyByte,
+    bench "findLastByteIn, wrapped" . nf (fmap (findLastByteIn asBA 3000000 2000000)) $ everyByte,
     bcompare "$NF == \"findLastByteIn, wrapped\""
       . bench "findLastByteIn, naive"
-      . nf (Naive.findLastByteIn asBA 3000000 2000000)
-      $ 0x5a
+      . nf (fmap (Naive.findLastByteIn asBA 3000000 2000000))
+      $ everyByte
   ]

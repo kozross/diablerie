@@ -38,13 +38,12 @@ void* memrchr(const void *s, int c, size_t n) {
 }
 #endif
 
-int find_last_byte (uint8_t* ba, int off, int len, int w8) {
+ptrdiff_t find_last_byte (uint8_t* ba, int off, int len, int w8) {
   void* s = &(ba[off]);
   uint8_t* res = memrchr (s, w8, len);
   if (res == NULL) {
     // search missed
     return -1;
   }
-  ptrdiff_t diff = res - ba;
-  return diff;
+  return res - ba;
 }
