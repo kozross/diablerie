@@ -3,6 +3,8 @@ module Naive
     findFirstByteIn,
     findLastByte,
     findLastByteIn,
+    countBytesEq,
+    countBytesEqIn,
   )
 where
 
@@ -57,3 +59,19 @@ findLastByteIn ba off len w8 = foldl' go Nothing [off + len - 1, off + len - 2 .
           then Just i
           else Nothing
       Just _ -> acc
+
+countBytesEq :: ByteArray -> Word8 -> Int
+countBytesEq ba w8 = sum . fmap go $ [0 .. sizeofByteArray ba - 1]
+  where
+    go :: Int -> Int
+    go i
+      | indexByteArray ba i == w8 = 1
+      | otherwise = 0
+
+countBytesEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
+countBytesEqIn ba off len w8 = sum . fmap go $ [off .. off + len - 1]
+  where
+    go :: Int -> Int
+    go i
+      | indexByteArray ba i == w8 = 1
+      | otherwise = 0

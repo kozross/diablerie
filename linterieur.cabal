@@ -36,10 +36,11 @@ library
     , primitive  ^>=0.7.1.0
 
   c-sources:
+    cbits/count-bytes.c
     cbits/find-first-byte.c
     cbits/find-last-byte.c
 
-  if os(darwin)
+  if os(osx)
     cc-options: -O2 -DLINTERIEUR_MAC
 
   else

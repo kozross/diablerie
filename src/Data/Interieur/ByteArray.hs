@@ -21,12 +21,16 @@ module Data.Interieur.ByteArray
     findFirstByteIn,
     findLastByte,
     findLastByteIn,
+    countBytesEq,
+    countBytesEqIn,
 
     -- * Raw operations
     findFirstByte#,
     findFirstByteIn#,
     findLastByte#,
     findLastByteIn#,
+    countBytesEq#,
+    countBytesEqIn#,
   )
 where
 
@@ -34,7 +38,7 @@ import Data.Primitive.ByteArray
   ( ByteArray (ByteArray),
     sizeofByteArray,
   )
-import Foreign.C.Types (CPtrdiff (CPtrdiff))
+import Foreign.C.Types (CInt (CInt), CPtrdiff (CPtrdiff))
 import GHC.Exts
   ( ByteArray#,
     Int (I#),
@@ -64,7 +68,6 @@ findFirstByte ba = findFirstByteIn ba 0 (sizeofByteArray ba)
 --
 -- * @0 '<=' off@ and @off '<' 'sizeofByteArray' ba@
 -- * @0 '<=' len@ and @len + off <= 'sizeofByteArray' ba@
--- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
 --
@@ -90,6 +93,14 @@ findFirstByteIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
 findLastByte :: ByteArray -> Word8 -> Maybe Int
 findLastByte ba = findLastByteIn ba 0 (sizeofByteArray ba)
 
+-- | A convenience wrapper for counting the entire 'ByteArray'. More precisely,
+-- @countBytesEq ba w8@ is the same as @'countBytesEqIn' ba 0 ('sizeofByteArray' ba)
+-- w8@.
+--
+-- @since 1.0.0
+countBytesEq :: ByteArray -> Word8 -> Int
+countBytesEq ba = countBytesEqIn ba 0 (sizeofByteArray ba)
+
 -- | Identical to 'findLastByteIn#', except using lifted types, and using a
 -- 'Maybe' argument for the result to avoid negative-number indices.
 --
@@ -100,7 +111,6 @@ findLastByte ba = findLastByteIn ba 0 (sizeofByteArray ba)
 --
 -- * @0 '<=' off@ and @off '<' 'sizeofByteArray' ba@
 -- * @0 '<=' len@ and @len + off <= 'sizeofByteArray' ba@
--- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
 --
@@ -118,23 +128,53 @@ findLastByteIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
         (-1) -> Nothing
         _ -> Just . fromIntegral $ res
 
+-- | Identical to 'countBytesEqIn#', except using lifted types.
+--
+-- = Prerequisites
+--
+-- Let @off@ be the offset argument, @len@ be the length argument, @ba@ the
+-- 'ByteArray' argument, and @w8@ the byte to count.
+--
+-- * @0 '<=' off@ and @off '<' 'sizeofByteArray' ba@
+-- * @0 '<=' len@ and @len + off <= 'sizeofByteArray' ba@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @countBytesEqIn ba off len w8@.
+--
+-- * @0 '<=' res@ and @res '<' len@.
+--
+-- @since 1.0.0
+countBytesEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
+countBytesEqIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
+  let (CInt res) = countBytesEqIn# ba# off# len# (word2Int# w8#)
+   in fromIntegral res
+
 -- Raw ops
 
 -- | A convenience wrapper for searching the entire 'ByteArray#'. More
--- precisely, @findFirstByte# ba w8# is the same as @'findFirstByteIn#' ba 0#
--- ('sizeofByteArray# ba) w8@.
+-- precisely, @findFirstByte# ba w8#@ is the same as @'findFirstByteIn#' ba 0#
+-- ('sizeofByteArray#' ba) w8@.
 --
 -- @since 1.0.0
 findFirstByte# :: ByteArray# -> Int# -> CPtrdiff
 findFirstByte# ba# = findFirstByteIn# ba# 0# (sizeofByteArray# ba#)
 
 -- | A convenience wrapper for searching the entire 'ByteArray#'. More
--- precisely, @findLastByte# ba w8# is the same as @'findLastByteIn#' ba 0#
--- ('sizeofByteArray# ba) w8@.
+-- precisely, @findLastByte# ba w8@ is the same as @'findLastByteIn#' ba 0#
+-- ('sizeofByteArray#' ba) w8@.
 --
 -- @since 1.0.0
 findLastByte# :: ByteArray# -> Int# -> CPtrdiff
 findLastByte# ba# = findLastByteIn# ba# 0# (sizeofByteArray# ba#)
+
+-- | A convenience wrapper for counting in the entire 'ByteArray#'. More
+-- precisely, @countBytesEq# ba w8@ is the same as @'countBytesEqIn#' ba 0#
+-- ('sizeofByteArray#' ba) w8@.
+--
+-- @since 1.0.0
+countBytesEq# :: ByteArray# -> Int# -> CInt
+countBytesEq# ba# = countBytesEqIn# ba# 0# (sizeofByteArray# ba#)
 
 -- | Searches a byte array from an offset for the index of the
 -- first occurrence of a byte.
@@ -214,3 +254,34 @@ foreign import ccall unsafe "find_last_byte"
     Int# ->
     -- | Location as index, or -1 if not found
     CPtrdiff
+
+-- | Counts the occurrences of a specific byte in a byte array from an offset.
+--
+-- = Prerequisites
+--
+-- Let @off@ be the offset argument, @len@ be the length argument, @ba@ the
+-- 'ByteArray#' argument, and @w8@ the byte to count.
+--
+-- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off <= 'sizeofByteArray#' ba@
+-- * @0 '<=' w8@ and @w8 '<' 255@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @countBytesEqIn# ba off len w8@.
+--
+-- * @0 '<=' res@ and @res '<' len@.
+--
+-- @since 1.0.0
+foreign import ccall unsafe "count_bytes_eq"
+  countBytesEqIn# ::
+    -- | The memory area to count
+    ByteArray# ->
+    -- | Offset from the start
+    Int# ->
+    -- | How many bytes to check
+    Int# ->
+    -- | What byte to count (only low 8 bits)
+    Int# ->
+    -- | How many times the byte occurs
+    CInt
