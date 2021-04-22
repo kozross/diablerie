@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Naive
   ( findFirstByte,
     findFirstByteIn,
@@ -5,9 +7,12 @@ module Naive
     findLastByteIn,
     countBytesEq,
     countBytesEqIn,
+    countBitsSet,
+    countBitsSetIn,
   )
 where
 
+import Data.Bits (popCount)
 import Data.Foldable (foldl')
 import Data.Primitive.ByteArray
   ( ByteArray,
@@ -75,3 +80,15 @@ countBytesEqIn ba off len w8 = sum . fmap go $ [off .. off + len - 1]
     go i
       | indexByteArray ba i == w8 = 1
       | otherwise = 0
+
+countBitsSet :: ByteArray -> Int
+countBitsSet ba = sum . fmap go $ [0 .. sizeofByteArray ba - 1]
+  where
+    go :: Int -> Int
+    go = popCount . indexByteArray @Word8 ba
+
+countBitsSetIn :: ByteArray -> Int -> Int -> Int
+countBitsSetIn ba off len = sum . fmap go $ [off .. off + len - 1]
+  where
+    go :: Int -> Int
+    go = popCount . indexByteArray @Word8 ba

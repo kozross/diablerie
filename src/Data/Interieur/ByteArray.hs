@@ -23,6 +23,8 @@ module Data.Interieur.ByteArray
     findLastByteIn,
     countBytesEq,
     countBytesEqIn,
+    countBitsSet,
+    countBitsSetIn,
 
     -- * Raw operations
     findFirstByte#,
@@ -31,6 +33,8 @@ module Data.Interieur.ByteArray
     findLastByteIn#,
     countBytesEq#,
     countBytesEqIn#,
+    countBitsSet#,
+    countBitsSetIn#,
   )
 where
 
@@ -101,6 +105,14 @@ findLastByte ba = findLastByteIn ba 0 (sizeofByteArray ba)
 countBytesEq :: ByteArray -> Word8 -> Int
 countBytesEq ba = countBytesEqIn ba 0 (sizeofByteArray ba)
 
+-- | A convenience wrapper for counting the entire 'ByteArray'. More precisely,
+-- @countBitsSet ba@ is the same as @countBitsSetIn ba 0# ('sizeofByteArray'
+-- ba)@.
+--
+-- @since 1.0.0
+countBitsSet :: ByteArray -> Int
+countBitsSet ba = countBitsSetIn ba 0 (sizeofByteArray ba)
+
 -- | Identical to 'findLastByteIn#', except using lifted types, and using a
 -- 'Maybe' argument for the result to avoid negative-number indices.
 --
@@ -150,6 +162,30 @@ countBytesEqIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
   let (CInt res) = countBytesEqIn# ba# off# len# (word2Int# w8#)
    in fromIntegral res
 
+-- | Counts the number of set bits (1-bits) in a byte array from an offset.
+--
+-- = Prerequisites
+--
+-- Let @off@ be the offset argument, @len@ be the length argument, and @ba@ be
+-- the 'ByteArray' argument.
+--
+-- * @0 '<=' off@ and @off '<' 'sizeofByteArray' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray' ba@
+--
+-- = Outcomes
+--
+-- Let @resSet@ be the result of a call @countBitsSetIn ba off len@, and
+-- @resClear@ be the result of a call @countBitsClearIn ba off len@.
+--
+-- * @0 '<=' resSet@ and @resSet '<' (len '*' 8)@
+-- * @resSet '+' resClear '==' len '*' 8@
+--
+-- @since 1.0.0
+countBitsSetIn :: ByteArray -> Int -> Int -> Int
+countBitsSetIn (ByteArray ba#) (I# off#) (I# len#) =
+  let (CInt res) = countBitsSetIn# ba# off# len#
+   in fromIntegral res
+
 -- Raw ops
 
 -- | A convenience wrapper for searching the entire 'ByteArray#'. More
@@ -175,6 +211,14 @@ findLastByte# ba# = findLastByteIn# ba# 0# (sizeofByteArray# ba#)
 -- @since 1.0.0
 countBytesEq# :: ByteArray# -> Int# -> CInt
 countBytesEq# ba# = countBytesEqIn# ba# 0# (sizeofByteArray# ba#)
+
+-- | A convenience wrapper for counting the entire 'ByteArray#'. More precisely,
+-- @countBitsSet# ba@ is the same as @countBitsSetIn# ba 0# ('sizeofByteArray#'
+-- ba)@.
+--
+-- @since 1.0.0
+countBitsSet# :: ByteArray# -> CInt
+countBitsSet# ba# = countBitsSetIn# ba# 0# (sizeofByteArray# ba#)
 
 -- | Searches a byte array from an offset for the index of the
 -- first occurrence of a byte.
@@ -263,7 +307,7 @@ foreign import ccall unsafe "find_last_byte"
 -- 'ByteArray#' argument, and @w8@ the byte to count.
 --
 -- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
--- * @0 '<=' len@ and @len + off <= 'sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
 -- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
@@ -284,4 +328,34 @@ foreign import ccall unsafe "count_bytes_eq"
     -- | What byte to count (only low 8 bits)
     Int# ->
     -- | How many times the byte occurs
+    CInt
+
+-- | Counts the number of set bits (1-bits) in a byte array from an offset.
+--
+-- = Prerequisites
+--
+-- Let @off@ be the offset argument, @len@ be the length argument, and @ba@ be
+-- the 'ByteArray#' argument.
+--
+-- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
+--
+-- = Outcomes
+--
+-- Let @resSet@ be the result of a call @countBitsSetIn# ba off len@, and
+-- @resClear@ be the result of a call @countBitsClearIn# ba off len@.
+--
+-- * @0 '<=' resSet@ and @resSet '<' (len '*' 8)@
+-- * @resSet '+' resClear '==' len '*' 8@
+--
+-- @since 1.0.0
+foreign import ccall unsafe "count_bits_set"
+  countBitsSetIn# ::
+    -- | The memory area to count
+    ByteArray# ->
+    -- | Offset from the start
+    Int# ->
+    -- | How many bytes to count in
+    Int# ->
+    -- | How many set bits there are
     CInt

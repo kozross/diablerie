@@ -36,6 +36,7 @@ library
     , primitive  ^>=0.7.1.0
 
   c-sources:
+    cbits/count-bits.c
     cbits/count-bytes.c
     cbits/find-first-byte.c
     cbits/find-last-byte.c

@@ -2,7 +2,8 @@ module Main (main) where
 
 import qualified Data.ByteString as BS
 import Data.Interieur.ByteArray
-  ( countBytesEq,
+  ( countBitsSet,
+    countBytesEq,
     countBytesEqIn,
     findFirstByte,
     findFirstByteIn,
@@ -35,8 +36,22 @@ runAllTests asBA =
   defaultMain
     [ bgroup "findFirstByte (wrapped)" . ffbTests $ asBA,
       bgroup "findLastByte (wrapped)" . flbTests $ asBA,
-      bgroup "countBytesEq (wrapped)" . cbeTests $ asBA
+      bgroup "countBytesEq (wrapped)" . cbeTests $ asBA,
+      bgroup "countBitsSet (wrapped)" . cbsTests $ asBA
     ]
+
+cbsTests :: ByteArray -> [Benchmark]
+cbsTests asBA =
+  [ testCase "countBitsSet, wrapped, correctness"
+      . assertEqual "countBitsSet" (Naive.countBitsSet asBA)
+      . countBitsSet
+      $ asBA,
+    bench "countBitsSet, wrapped" . nf countBitsSet $ asBA,
+    bcompare "$NF == \"countBitsSet, wrapped\""
+      . bench "countBitsSet, naive"
+      . nf Naive.countBitsSet
+      $ asBA
+  ]
 
 cbeTests :: ByteArray -> [Benchmark]
 cbeTests asBA =
