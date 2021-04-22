@@ -41,10 +41,10 @@ library
     cbits/find-last-byte.c
 
   if os(osx)
-    cc-options: -O2 -DLINTERIEUR_MAC
+    cc-options: -march=native -O2 -DLINTERIEUR_MAC
 
   else
-    cc-options: -O2
+    cc-options: -march=native -O2
 
   hs-source-dirs:  src
 

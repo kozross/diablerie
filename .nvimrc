@@ -8,7 +8,7 @@ let g:ale_lint_on_insert_leave = 0
 let g:ale_lint_on_enter = 0
 
 call ale#Set('haskell_cabal_build_options', '--enable-tests --disable-optimization --enable-benchmarks')
-call ale#Set('c_cc_options', '-std=c99 -Wall -Wextra')
+call ale#Set('c_cc_options', '-std=c99 -march=native -Wall -Wextra')
 
 function! GetCabalCommand(buffer) abort
   let l:flags = ale#Var(a:buffer, 'haskell_cabal_build_options')
