@@ -3,6 +3,7 @@ module Main (main) where
 import qualified Data.ByteString as BS
 import Data.Interieur.ByteArray
   ( countBytesEq,
+    countBytesEqIn,
     findFirstByte,
     findFirstByteIn,
     findLastByte,
@@ -47,6 +48,15 @@ cbeTests asBA =
     bcompare "$NF == \"countBytesEq, wrapped\""
       . bench "countBytesEq, naive"
       . nf (fmap (Naive.countBytesEq asBA))
+      $ everyByte,
+    testCase "countBytesEqIn, wrapped, correctness"
+      . assertEqual "countBytesEqIn" (Naive.countBytesEqIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (countBytesEqIn asBA 3000000 2000000)
+      $ everyByte,
+    bench "countBytesEqIn, wrapped" . nf (fmap (countBytesEqIn asBA 3000000 2000000)) $ everyByte,
+    bcompare "$NF == \"countBytesEqIn, wrapped\""
+      . bench "countBytesEqIn, naive"
+      . nf (fmap (Naive.countBytesEqIn asBA 3000000 2000000))
       $ everyByte
   ]
 
