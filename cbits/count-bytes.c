@@ -1,36 +1,51 @@
 #include <stdint.h> 
 #include <stddef.h> 
-#if __AVX2__ && __POPCNT__
+#if __AVX2__
 #include <immintrin.h>
 
 int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
-  int total = 0;
-  size_t big_steps = len / 128;
-  size_t small_steps = len % 128;
-  uint8_t* ptr = &(ba[off]);
+  __m256i totals = _mm256_setzero_si256();
   __m256i mask = _mm256_set1_epi8(w8);
+  size_t big_steps = len / 256;
+  size_t small_steps = len % 256;
+  uint8_t* ptr = &(ba[off]);
   for (size_t i = 0; i < big_steps; i++) {
-    __m256i input = _mm256_loadu_si256((__m256i const*)ptr);
+    __m256i input[8];
+    input[0] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
     ptr += 32;
-    __m256i input2 = _mm256_loadu_si256((__m256i const*)ptr);
+    input[1] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
     ptr += 32;
-     __m256i input3 = _mm256_loadu_si256((__m256i const*)ptr);
+    input[2] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
     ptr += 32;
-      __m256i input4 = _mm256_loadu_si256((__m256i const*)ptr);
+    input[3] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
     ptr += 32;
-    __m256i result = _mm256_cmpeq_epi8(input, mask);
-    int packed = _mm256_movemask_epi8(result);
-    total += __builtin_popcount(packed);
-    __m256i result2 = _mm256_cmpeq_epi8(input2, mask);
-    int packed2 = _mm256_movemask_epi8(result2);
-    total += __builtin_popcount(packed2);
-    __m256i result3 = _mm256_cmpeq_epi8(input3, mask);
-    int packed3 = _mm256_movemask_epi8(result3);
-    total += __builtin_popcount(packed3);
-    __m256i result4 = _mm256_cmpeq_epi8(input4, mask);
-    int packed4 = _mm256_movemask_epi8(result4);
-    total += __builtin_popcount(packed4);
+    input[4] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
+    ptr += 32;
+    input[5] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
+    ptr += 32;
+    input[6] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
+    ptr += 32;
+    input[7] = 
+      _mm256_cmpeq_epi8(mask, _mm256_loadu_si256((__m256i const*)ptr));
+    ptr += 32;
+    __m256i summed = _mm256_add_epi8(_mm256_add_epi8(_mm256_add_epi8(input[0], input[1]),
+                                                     _mm256_add_epi8(input[2], input[3])),
+                                     _mm256_add_epi8(_mm256_add_epi8(input[4], input[5]),
+                                                     _mm256_add_epi8(input[6], input[7])));
+    totals = _mm256_add_epi64(totals, _mm256_sad_epu8(_mm256_abs_epi8(summed), 
+                                                      _mm256_setzero_si256()));
   }
+  int total = _mm256_extract_epi64(totals, 0) + 
+              _mm256_extract_epi64(totals, 1) + 
+              _mm256_extract_epi64(totals, 2) +
+              _mm256_extract_epi64(totals, 3);
   for (size_t i = 0; i < small_steps; i++) {
     if ((*ptr) == w8) {
       total++;
