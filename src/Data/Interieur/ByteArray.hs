@@ -19,6 +19,8 @@ module Data.Interieur.ByteArray
   ( -- * Wrapped operations
     findFirstByte,
     findFirstByteIn,
+    findFirst,
+    findFirstIn,
     findLastByte,
     findLastByteIn,
     countBytesEq,
@@ -31,6 +33,8 @@ module Data.Interieur.ByteArray
     findFirstByteIn#,
     findLastByte#,
     findLastByteIn#,
+    findFirst#,
+    findFirstIn#,
     countBytesEq#,
     countBytesEqIn#,
     countBitsSet#,
@@ -85,6 +89,57 @@ findFirstByte ba = findFirstByteIn ba 0 (sizeofByteArray ba)
 findFirstByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findFirstByteIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
   let (CPtrdiff res) = findFirstByteIn# ba# off# len# (word2Int# w8#)
+   in case signum res of
+        (-1) -> Nothing
+        _ -> Just . fromIntegral $ res
+
+-- | A convenience wrapper for searching the entire haystack for the entire
+-- needle. More precisely, @findFirst haystack needle@ is the same as
+-- @'findFirstIn' haystack 0 ('sizeofByteArray' haystack) needle 0
+-- ('sizeofByteArray' needle).
+--
+-- @since 1.0.0
+findFirst :: ByteArray -> ByteArray -> Maybe Int
+findFirst haystack needle =
+  findFirstIn
+    haystack
+    0
+    (sizeofByteArray haystack)
+    needle
+    0
+    (sizeofByteArray needle)
+
+-- | Identical to 'findFirstIn#', except using lifted types, and using a 'Maybe'
+-- argument for the result to avoid negative-number indices.
+--
+-- = Prerequisites
+--
+-- Let @haystack@ be the 'ByteArray' argument we want to search /in/, @needle@
+-- be the 'ByteArray' argument we want to search /for/, @haystackOff@ be the
+-- offset into @haystack@, @needleOff@ be the offset into @needle@,
+-- @haystackLen@ be the length of @haystack@ to check in, @needleLen@ be the
+-- length of the @needle@ to check in.
+--
+-- * @0 '<=' haystackOff@ and @haystackOff '<' 'sizeofByteArray' haystack@
+-- * @0 '<=' needleOff@ and @needleOff '<' 'sizeofByteArray' needle@
+-- * @0 '<=' haystackLen@ and @haystackLen + haystackOff '<=' 'sizeofByteArray' haystack@
+-- * @0 '<=' needleLen@ and @needleLen + needleOff '<=' 'sizeofByteArray' needle@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @findFirstIn haystack haystackOff
+-- haystackLen needle needleOff needleLen@.
+--
+-- * If @needleLen '==' 0@ or @needleLen > haystackLen@, @res = -1@
+-- * If @needle@ at @needleOff@ for @needleLen@ exists in @haystack@ at or after
+--   @haystackOff@ and entirely within @haystackLen@, @res@ is the first index
+--   at which the specified chunk of @needle@ can be found in @haystack@.
+-- * Otherwise, @res = -1@.
+--
+-- @since 1.0.0
+findFirstIn :: ByteArray -> Int -> Int -> ByteArray -> Int -> Int -> Maybe Int
+findFirstIn (ByteArray h#) (I# hoff#) (I# hlen#) (ByteArray n#) (I# noff#) (I# nlen#) =
+  let (CPtrdiff res) = findFirstIn# h# hoff# hlen# n# noff# nlen#
    in case signum res of
         (-1) -> Nothing
         _ -> Just . fromIntegral $ res
@@ -196,6 +251,22 @@ countBitsSetIn (ByteArray ba#) (I# off#) (I# len#) =
 findFirstByte# :: ByteArray# -> Int# -> CPtrdiff
 findFirstByte# ba# = findFirstByteIn# ba# 0# (sizeofByteArray# ba#)
 
+-- | A convenience wrapper for searching the entire haystack for the entire
+-- needle. More precisely, @findFirst# haystack needle@ is the same as
+-- @'findFirst# haystack 0 ('sizeofByteArray# haystack) needle 0
+-- ('sizeofByteArray# needle)@.
+--
+-- @since 1.0.0
+findFirst# :: ByteArray# -> ByteArray# -> CPtrdiff
+findFirst# haystack# needle# =
+  findFirstIn#
+    haystack#
+    0#
+    (sizeofByteArray# haystack#)
+    needle#
+    0#
+    (sizeofByteArray# needle#)
+
 -- | A convenience wrapper for searching the entire 'ByteArray#'. More
 -- precisely, @findLastByte# ba w8@ is the same as @'findLastByteIn#' ba 0#
 -- ('sizeofByteArray#' ba) w8@.
@@ -229,7 +300,7 @@ countBitsSet# ba# = countBitsSetIn# ba# 0# (sizeofByteArray# ba#)
 -- argument, @ba@ the 'ByteArray#' argument, and @w8@ the byte to match.
 --
 -- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
--- * @0 '<=' len@ and @len + off <= 'sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
 -- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
@@ -254,6 +325,58 @@ foreign import ccall unsafe "find_first_byte"
     -- | How many bytes to check
     Int# ->
     -- | What byte to match (only low 8 bits)
+    Int# ->
+    -- | Location as index, or -1 if not found
+    CPtrdiff
+
+-- | Searches a byte array from an offset for the index of the first occurrence
+-- of another byte array, also from an offset.
+--
+-- = Prerequisites
+--
+-- Let @haystack@ be the 'ByteArray#' argument we want to search /in/, @needle@
+-- be the 'ByteArray#' argument we want to search /for/, @haystackOff@ be the
+-- offset into @haystack@, @needleOff@ be the offset into @needle@,
+-- @haystackLen@ be the length of @haystack@ to check in, @needleLen@ be the
+-- length of the @needle@ to check in.
+--
+-- * @0 '<=' haystackOff@ and @haystackOff '<' 'sizeofByteArray#' haystack@
+-- * @0 '<=' needleOff@ and @needleOff '<' 'sizeofByteArray#' needle@
+-- * @0 '<=' haystackLen@ and @haystackLen + haystackOff '<=' 'sizeofByteArray#' haystack@
+-- * @0 '<=' needleLen@ and @needleLen + needleOff '<=' 'sizeofByteArray#' needle@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @findFirstIn# haystack haystackOff
+-- haystackLen needle needleOff needleLen@.
+--
+-- * If @needleLen '==' 0@ or @needleLen > haystackLen@, @res = -1@
+-- * If @needle@ at @needleOff@ for @needleLen@ exists in @haystack@ at or after
+--   @haystackOff@ and entirely within @haystackLen@, @res@ is the first index
+--   at which the specified chunk of @needle@ can be found in @haystack@.
+-- * Otherwise, @res = -1@.
+--
+-- = Notes
+--
+-- This calls @[memmem](https://man7.org/linux/man-pages/man3/memmem.3.html)
+-- underneath. While this is not mandated by any C standard, implementations
+-- exist for Glibc, musl, the FreeBSD and OpenBSD libcs, and the macOS libc.
+-- Thus, we consider this \'sufficiently portable\' to include.
+--
+-- @since 1.0.0
+foreign import ccall unsafe "find_first_block"
+  findFirstIn# ::
+    -- | The memory area to search /in/ (the \'haystack\')
+    ByteArray# ->
+    -- | Offset from the start of the memory area to search in
+    Int# ->
+    -- | How many bytes to search in
+    Int# ->
+    -- | The memory area to search /for/ (the \'needle\')
+    ByteArray# ->
+    -- | Offset from the start of the memory area to search for
+    Int# ->
+    -- | How many bytes to search for
     Int# ->
     -- | Location as index, or -1 if not found
     CPtrdiff
