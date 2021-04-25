@@ -6,12 +6,12 @@ description:
   A collection of fast, byte-level intrinsic operations. Focused on clarity and
   portability.
 
-homepage:           https://github.com/kozross/internal-affairs
+homepage:           https://github.com/kozross/linterieur
 license:            Apache-2.0
 license-file:       LICENSE.md
 author:             Koz Ross
 maintainer:         koz.ross@retro-freedom.nz
-bug-reports:        https://github.com/kozross/internal-affairs/issues
+bug-reports:        https://github.com/kozross/linterieur/issues
 copyright:          (C) Koz Ross 2021
 category:           Data
 tested-with:        GHC ==8.6.5 || ==8.8.4 || ==8.10.3 || ==9.0.1
@@ -21,12 +21,28 @@ extra-source-files:
   CHANGELOG.md
   README.md
 
+-- Common section
+
 common lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wredundant-constraints
 
   default-language: Haskell2010
+
+-- Flags
+
+flag legacy-sse
+  description:
+    Force the use of SSE even when AVX is available. This is mostly
+    for testing, or in cases where you want either this library, or stuff linked
+    against it, to be usable on x86 systems which don't support AVX despite
+    building on systems which do. This will force a performance loss, so don't use
+    this flag unless you seriously know what you're doing.
+
+  default:     False
+
+-- Library
 
 library
   import:          lang
@@ -41,13 +57,21 @@ library
     cbits/find-first-byte.c
     cbits/find-last-byte.c
 
-  if os(osx)
+  if (os(osx) && flag(legacy-sse))
+    cc-options: -march=native -O2 -DLINTERIEUR_LEGACY_SSE -DLINTERIEUR_MAC
+
+  elif os(osx)
     cc-options: -march=native -O2 -DLINTERIEUR_MAC
+
+  elif flag(legacy-sse)
+    cc-options: -march=native -O2 -DLINTERIEUR_LEGACY_SSE
 
   else
     cc-options: -march=native -O2
 
   hs-source-dirs:  src
+
+-- Benches
 
 benchmark benches
   import:         lang

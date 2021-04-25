@@ -1,6 +1,6 @@
 #include <stdint.h> 
 #include <stddef.h> 
-#if __AVX2__
+#if __AVX2__ && !LINTERIEUR_LEGACY_SSE
 #include <immintrin.h>
 
 int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
