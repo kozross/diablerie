@@ -1,5 +1,5 @@
 " Enable hlint and GHC via Cabal
-let g:ale_linters = {'haskell': ['hlint', 'cabal-build'], 'c': ['clangtidy', 'cc']}
+let g:ale_linters = {'haskell': ['cabal-build'], 'c': ['clangtidy', 'cc']}
 " ... only
 let g:ale_linters_explicit = 1
 " Don't lint until I save
@@ -7,7 +7,7 @@ let g:ale_lint_on_text_changed = 'never'
 let g:ale_lint_on_insert_leave = 0
 let g:ale_lint_on_enter = 0
 
-call ale#Set('haskell_cabal_build_options', '--enable-tests --disable-optimization --enable-benchmarks')
+call ale#Set('haskell_cabal_build_options', '--disable-optimization --enable-benchmarks')
 call ale#Set('c_cc_executable', 'gcc')
 call ale#Set('c_cc_options', '-std=c99 -march=native -Wall -Wextra')
 

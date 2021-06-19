@@ -30,18 +30,6 @@ common lang
 
   default-language: Haskell2010
 
--- Flags
-
-flag legacy-sse
-  description:
-    Force the use of SSE even when AVX is available. This is mostly
-    for testing, or in cases where you want either this library, or stuff linked
-    against it, to be usable on x86 systems which don't support AVX despite
-    building on systems which do. This will force a performance loss, so don't use
-    this flag unless you seriously know what you're doing.
-
-  default:     False
-
 -- Library
 
 library
@@ -52,24 +40,10 @@ library
     , primitive  ^>=0.7.1.0
 
   c-sources:
-    cbits/count-bits.c
     cbits/count-bytes.c
-    cbits/find-first-block.c
     cbits/find-first-byte.c
-    cbits/find-last-byte.c
-
-  if (os(osx) && flag(legacy-sse))
-    cc-options: -march=native -O2 -DLINTERIEUR_LEGACY_SSE -DLINTERIEUR_MAC
-
-  elif os(osx)
-    cc-options: -march=native -O2 -DLINTERIEUR_MAC
-
-  elif flag(legacy-sse)
-    cc-options: -march=native -O2 -DLINTERIEUR_LEGACY_SSE
-
-  else
-    cc-options: -march=native -O2
-
+  
+  cc-options: -march=native -O2
   hs-source-dirs:  src
 
 -- Benches
