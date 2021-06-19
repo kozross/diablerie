@@ -32,7 +32,7 @@ import Data.Primitive.ByteArray
   ( ByteArray (ByteArray),
     sizeofByteArray,
   )
-import Foreign.C.Types (CInt (CInt), CPtrdiff (CPtrdiff))
+import Foreign.C.Types (CInt (CInt), CPtrdiff (CPtrdiff), CSize (CSize))
 import GHC.Exts
   ( ByteArray#,
     Int (I#),
@@ -104,8 +104,8 @@ countBytesEq ba = countBytesEqIn ba 0 (sizeofByteArray ba)
 --
 -- @since 1.0.0
 countBytesEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
-countBytesEqIn (ByteArray ba#) (I# off#) (I# len#) (W8# w8#) =
-  let (CInt res) = countBytesEqIn# ba# off# len# (word2Int# w8#)
+countBytesEqIn (ByteArray ba#) off len (W8# w8#) =
+  let (CInt res) = countBytesEqIn# ba# (fromIntegral off) (fromIntegral len) (word2Int# w8#)
    in fromIntegral res
 
 -- Raw ops
@@ -171,9 +171,9 @@ foreign import ccall unsafe "count_bytes_eq"
     -- | The memory area to count
     ByteArray# ->
     -- | Offset from the start
-    Int# ->
+    CSize ->
     -- | How many bytes to check
-    Int# ->
+    CSize ->
     -- | What byte to count (only low 8 bits)
     Int# ->
     -- | How many times the byte occurs

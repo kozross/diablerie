@@ -3,7 +3,7 @@
 #if __AVX2__ && !LINTERIEUR_LEGACY_SSE
 #include <immintrin.h>
 
-int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
+size_t count_bytes_eq (uint8_t* ba, size_t off, size_t len, int w8) {
   __m256i totals = _mm256_setzero_si256();
   __m256i mask = _mm256_set1_epi8(w8);
   size_t big_steps = len / 256;
@@ -42,7 +42,7 @@ int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
     totals = _mm256_add_epi64(totals, _mm256_sad_epu8(_mm256_abs_epi8(summed), 
                                                       _mm256_setzero_si256()));
   }
-  int total = _mm256_extract_epi64(totals, 0) + 
+  size_t total = _mm256_extract_epi64(totals, 0) + 
               _mm256_extract_epi64(totals, 1) + 
               _mm256_extract_epi64(totals, 2) +
               _mm256_extract_epi64(totals, 3);
@@ -101,25 +101,59 @@ int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
 #elif __ARM_NEON
 #include <arm_neon.h>
 
-int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
+static inline __attribute__((always_inline)) uint8x16_t compare_and_shift (
+    uint8x16_t src,
+    uint8x16_t mask) {
+  return vshrq_n_u8(vceqq_u8(src, mask), 7);
+}
+
+static inline __attribute__((always_inline)) uint8x16_t sum_quad (uint8x16x4_t quad) {
+  return vaddq_u8(vaddq_u8(quad.val[0], quad.val[1]),
+                  vaddq_u8(quad.val[2], quad.val[3]));
+}
+
+static inline __attribute__((always_inline)) void shift_quad (
+    uint8x16x4_t* quad,
+    uint8x16_t mask) {
+  #pragma GCC unroll 4
+  for (size_t i = 0; i < 4; i++) {
+    quad->val[i] = compare_and_shift(quad->val[i], mask);
+  }
+}
+
+size_t count_bytes_eq (uint8_t const * ba, 
+                       size_t const off, 
+                       size_t const len, 
+                       int const w8) {
   uint64x2_t totals = vdupq_n_u64(0);
   uint8x16_t mask = vdupq_n_u8(w8);
-  size_t big_steps = len / 64;
-  size_t small_steps = len % 64;
-  uint8_t* ptr = &(ba[off]);
+  size_t step_size = 16 * 255;
+  size_t big_steps = len / step_size;
+  size_t rest = len % step_size;
+  uint8_t* ptr = (uint8_t*)&(ba[off]);
   for (size_t i = 0; i < big_steps; i++) {
+    uint8x16_t accum = vdupq_n_u8(0);
+    #pragma GCC unroll 3
+    for (size_t j = 0; j < 51; j++) {
+      uint8x16x4_t input_big = vld1q_u8_x4(ptr);
+      ptr += 64;
+      uint8x16_t input_small = vld1q_u8(ptr);
+      ptr += 16;
+      shift_quad(&input_big, mask);
+      input_small = compare_and_shift(input_small, mask);
+      accum = vaddq_u8(sum_quad(input_big), vaddq_u8(accum, input_small));
+    }
+    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(accum))));
+  }
+  size_t medium_steps = rest / 64;
+  size_t small_steps = rest % 64;
+  for (size_t i = 0; i < medium_steps; i++) {
     uint8x16x4_t input = vld1q_u8_x4(ptr);
     ptr += 64;
-    input.val[0] = vshrq_n_u8(vceqq_u8(input.val[0], mask), 7);
-    input.val[1] = vshrq_n_u8(vceqq_u8(input.val[1], mask), 7);
-    input.val[2] = vshrq_n_u8(vceqq_u8(input.val[2], mask), 7);
-    input.val[3] = vshrq_n_u8(vceqq_u8(input.val[3], mask), 7);
-    uint8x16_t summed = vaddq_u8(vaddq_u8(input.val[0], input.val[1]),
-                                  vaddq_u8(input.val[2], input.val[3]));
-    uint64x2_t final = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(summed)));
-    totals = vaddq_u64(totals, final);
+    shift_quad(&input, mask);
+    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(sum_quad(input))))); 
   }
-  int total = vpaddd_u64(totals);
+  size_t total = vpaddd_u64(totals);
   for (size_t i = 0; i < small_steps; i++) {
     if ((*ptr) == w8) {
       total++;
@@ -133,8 +167,8 @@ static uint64_t broadcast (uint8_t w8) {
   return w8 * 0x0101010101010101ULL;
 }
 
-int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
-  int total = 0;
+size_t count_bytes_eq (uint8_t* ba, size_t off, size_t len, int w8) {
+  size_t total = 0;
   size_t big_steps = len / 8;
   size_t small_steps = len % 8;
   uint8_t* ptr = &(ba[off]);
