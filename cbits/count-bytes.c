@@ -109,16 +109,16 @@ size_t count_bytes_eq (uint8_t const * const src,
   // This reduces the need to evacuate SIMD registers during bulk work.
   uint64x2_t totals = vdupq_n_u64(0);
   uint8x16_t matches = vdupq_n_u8(byte);
-  // Our stride is four SIMD registers at once.
-  // That's 16 bytes times 4 = 64
-  size_t big_strides = len / 64;
-  size_t small_strides = len % 64;
+  // Our stride is 8 SIMD registers at once.
+  // That's 16 bytes times 8 = 128
+  size_t big_strides = len / 128;
+  size_t small_strides = len % 128;
   uint8_t* ptr = (uint8_t*)&(src[off]);
   // Big strides first, using our SIMD accumulators.
   for (size_t i = 0; i < big_strides; i++) {
     uint8x16_t acc = vdupq_n_u8(0);
-    #pragma GCC unroll 4
-    for (size_t j = 0; j < 4; j++) {
+    #pragma GCC unroll 8
+    for (size_t j = 0; j < 8; j++) {
       // Load, then compare.
       // This fills any lane which matches our byte with 0xFF.
       // We turn this into 0x1 with a right shift by 7 bits.
