@@ -101,61 +101,38 @@ int count_bytes_eq (uint8_t* ba, int off, int len, int w8) {
 #elif __ARM_NEON
 #include <arm_neon.h>
 
-static inline __attribute__((always_inline)) uint8x16_t compare_and_shift (
-    uint8x16_t src,
-    uint8x16_t mask) {
-  return vshrq_n_u8(vceqq_u8(src, mask), 7);
-}
-
-static inline __attribute__((always_inline)) uint8x16_t sum_quad (uint8x16x4_t quad) {
-  return vaddq_u8(vaddq_u8(quad.val[0], quad.val[1]),
-                  vaddq_u8(quad.val[2], quad.val[3]));
-}
-
-static inline __attribute__((always_inline)) void shift_quad (
-    uint8x16x4_t* quad,
-    uint8x16_t mask) {
-  #pragma GCC unroll 4
-  for (size_t i = 0; i < 4; i++) {
-    quad->val[i] = compare_and_shift(quad->val[i], mask);
-  }
-}
-
-size_t count_bytes_eq (uint8_t const * ba, 
-                       size_t const off, 
-                       size_t const len, 
-                       int const w8) {
+size_t count_bytes_eq (uint8_t const * const src,
+                       size_t const off,
+                       size_t const len,
+                       int const byte) {
+  // Keep two counters at once.
+  // This reduces the need to evacuate SIMD registers during bulk work.
   uint64x2_t totals = vdupq_n_u64(0);
-  uint8x16_t mask = vdupq_n_u8(w8);
-  size_t step_size = 16 * 255;
-  size_t big_steps = len / step_size;
-  size_t rest = len % step_size;
-  uint8_t* ptr = (uint8_t*)&(ba[off]);
-  for (size_t i = 0; i < big_steps; i++) {
-    uint8x16_t accum = vdupq_n_u8(0);
-    #pragma GCC unroll 3
-    for (size_t j = 0; j < 51; j++) {
-      uint8x16x4_t input_big = vld1q_u8_x4(ptr);
-      ptr += 64;
-      uint8x16_t input_small = vld1q_u8(ptr);
+  uint8x16_t matches = vdupq_n_u8(byte);
+  // Our stride is four SIMD registers at once.
+  // That's 16 bytes times 4 = 64
+  size_t big_strides = len / 64;
+  size_t small_strides = len % 64;
+  uint8_t* ptr = (uint8_t*)&(src[off]);
+  // Big strides first, using our SIMD accumulators.
+  for (size_t i = 0; i < big_strides; i++) {
+    uint8x16_t acc = vdupq_n_u8(0);
+    #pragma GCC unroll 4
+    for (size_t j = 0; j < 4; j++) {
+      // Load, then compare.
+      // This fills any lane which matches our byte with 0xFF.
+      // We turn this into 0x1 with a right shift by 7 bits.
+      acc = vaddq_u8(acc, vshrq_n_u8(vceqq_u8(vld1q_u8(ptr), matches), 7));
       ptr += 16;
-      shift_quad(&input_big, mask);
-      input_small = compare_and_shift(input_small, mask);
-      accum = vaddq_u8(sum_quad(input_big), vaddq_u8(accum, input_small));
     }
-    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(accum))));
+    // Collect our block accumulator and stuff it into our SIMD counters.
+    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(acc))));
   }
-  size_t medium_steps = rest / 64;
-  size_t small_steps = rest % 64;
-  for (size_t i = 0; i < medium_steps; i++) {
-    uint8x16x4_t input = vld1q_u8_x4(ptr);
-    ptr += 64;
-    shift_quad(&input, mask);
-    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(sum_quad(input))))); 
-  }
+  // Evacuate our SIMD counters.
   size_t total = vpaddd_u64(totals);
-  for (size_t i = 0; i < small_steps; i++) {
-    if ((*ptr) == w8) {
+  // Tongue-crawl anything left.
+  for (size_t i = 0; i < small_strides; i++) {
+    if ((*ptr) == byte) {
       total++;
     }
     ptr++;
