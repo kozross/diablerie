@@ -42,8 +42,8 @@ library
   c-sources:
     cbits/count-bytes.c
     cbits/find-first-byte.c
-  
-  cc-options: -march=native -O2
+
+  cc-options:      -march=native -O2
   hs-source-dirs:  src
 
 -- Benches
