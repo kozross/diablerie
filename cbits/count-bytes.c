@@ -1,42 +1,10 @@
 #include <stdint.h> 
 #include <stddef.h> 
 
-static inline uint64_t broadcast (uint8_t byte) {
-  return byte * 0x0101010101010101ULL;
-}
-
-static size_t count_bytes_eq_fallback (uint8_t const * const src,
-                                       size_t const off,
-                                       size_t const len,
-                                       int const byte) {
-  size_t total = 0;
-  // We go a 64-bit word at a time.
-  size_t big_strides = len / 8;
-  size_t small_strides = len % 8;
-  uint8_t* ptr = (uint8_t*)&(src[off]);
-  // We use the method described in "Bit Twiddling Hacks".
-  // Source: https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
-  uint64_t matches = broadcast(byte);
-  uint64_t mask = broadcast(0x7f);
-  for (size_t i = 0; i < big_strides; i++) {
-    uint64_t* big_ptr = (uint64_t*)ptr;
-    uint64_t input = (*big_ptr) ^ matches;
-    uint64_t tmp = (input & mask) + mask;
-    uint64_t result = ~(tmp | input | mask);
-    total += __builtin_popcountll(result);
-    ptr += 8;
-  }
-  // Finish the rest the slow way.
-  for (size_t i = 0; i < small_strides; i++) {
-    if ((*ptr) == byte) {
-      total++;
-    }
-    ptr++;
-  }
-  return total;
-}
-#if (__x86_64__ || __i386__)
+#if (__x86_64__ || (__i386__ && __SSE2__))
 #include <emmintrin.h>
+
+#if __AVX2__
 #include <immintrin.h>
 
 static size_t count_bytes_eq_avx2 (uint8_t const * const src,
@@ -82,6 +50,7 @@ static size_t count_bytes_eq_avx2 (uint8_t const * const src,
   }
   return total;
 }
+#endif
 
 static size_t count_bytes_eq_sse2 (uint8_t const * const src,
                                    size_t const off,
@@ -102,14 +71,16 @@ static size_t count_bytes_eq_sse2 (uint8_t const * const src,
     #pragma GCC unroll 8
     for (size_t j = 0; j < 8; j++) {
       __m128i input = _mm_loadu_si128((__m128i*)ptr);
-      ptr += 32;
+      ptr += 16;
       // This gives 0xFF in the line on a match, which is -1. Thus, as we
       // accumulate, we end up with between 0 and -8 in every accumulator lane.
       acc = _mm_add_epi8(acc, _mm_cmpeq_epi8(matches, input));
     }
-    // Stuff the accumulator into our counters, after taking the absolute value.
+    // Stuff the accumulator into our counters.
+    // Since we know the value will be non-positive, we can fake absolute value
+    // with a subtract-from-zero.
     totals = _mm_add_epi64(totals,
-                           _mm_sad_epu8(_mm_abs_epi8(acc),
+                           _mm_sad_epu8(_mm_sub_epi8(_mm_setzero_si128(), acc),
                                         _mm_setzero_si128()));
   }
   // Evacuate our counters
@@ -127,6 +98,7 @@ static size_t count_bytes_eq_sse2 (uint8_t const * const src,
   return total;
 }
 
+#if __AVX2__
 size_t count_bytes_eq (uint8_t const * const src,
                        size_t const off,
                        size_t const len,
@@ -135,13 +107,18 @@ size_t count_bytes_eq (uint8_t const * const src,
   if (__builtin_cpu_supports("avx2")) {
     return count_bytes_eq_avx2(src, off, len, byte);
   }
-  else if (__builtin_cpu_supports("sse2")) {
+  else {
     return count_bytes_eq_sse2(src, off, len, byte);
   }
-  else {
-    return count_bytes_eq_fallback(src, off, len, byte);
-  }
 }
+#else
+size_t count_bytes_eq (uint8_t const * const src,
+                       size_t const off,
+                       size_t const len,
+                       int const byte) {
+  return count_bytes_eq_sse2(src, off, len, byte);
+}
+#endif
 #elif __ARM_NEON
 #include <arm_neon.h>
 
@@ -186,7 +163,35 @@ size_t count_bytes_eq (uint8_t const * const src,
   return total;
 }
 #else
+static inline uint64_t broadcast (uint8_t byte) {
+  return byte * 0x0101010101010101ULL;
+}
+
 size_t count_bytes_eq (uint8_t* src, size_t off, size_t len, int byte) {
-  return count_bytes_eq_fallback(src, off, len, byte);
+  size_t total = 0;
+  // We go a 64-bit word at a time.
+  size_t big_strides = len / 8;
+  size_t small_strides = len % 8;
+  uint8_t* ptr = (uint8_t*)&(src[off]);
+  // We use the method described in "Bit Twiddling Hacks".
+  // Source: https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
+  uint64_t matches = broadcast(byte);
+  uint64_t mask = broadcast(0x7f);
+  for (size_t i = 0; i < big_strides; i++) {
+    uint64_t* big_ptr = (uint64_t*)ptr;
+    uint64_t input = (*big_ptr) ^ matches;
+    uint64_t tmp = (input & mask) + mask;
+    uint64_t result = ~(tmp | input | mask);
+    total += __builtin_popcountll(result);
+    ptr += 8;
+  }
+  // Finish the rest the slow way.
+  for (size_t i = 0; i < small_strides; i++) {
+    if ((*ptr) == byte) {
+      total++;
+    }
+    ptr++;
+  }
+  return total;
 }
 #endif

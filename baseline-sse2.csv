@@ -1,0 +1,9 @@
+Name,Mean (ps),2*Stdev (ps),Allocated,Copied
+"All.findFirstByte (wrapped).findFirstByte, wrapped",10345723000,151659946,24344,121
+"All.findFirstByte (wrapped).findFirstByte, naive",2550973218950,41132414096,0,0
+"All.findFirstByte (wrapped).findFirstByteIn, wrapped",3427318679,4188774,25280,128
+"All.findFirstByte (wrapped).findFirstByteIn, naive",799222021800,6320660258,0,0
+"All.countBytesEq (wrapped).countBytesEq, wrapped",21853867084,268329444,26395,191
+"All.countBytesEq (wrapped).countBytesEq, naive",2447088083200,30582296552,0,0
+"All.countBytesEq (wrapped).countBytesEqIn, wrapped",6780606839,155475846,26649,181
+"All.countBytesEq (wrapped).countBytesEqIn, naive",800219282550,7949205336,0,0
