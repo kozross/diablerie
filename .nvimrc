@@ -1,5 +1,5 @@
 " Enable hlint and GHC via Cabal
-let g:ale_linters = {'haskell': ['cabal-build'], 'c': ['clangtidy', 'cc']}
+let g:ale_linters = {'haskell': ['hlint', 'cabal-build'], 'c': ['clangtidy', 'cc']}
 " ... only
 let g:ale_linters_explicit = 1
 " Don't lint until I save
