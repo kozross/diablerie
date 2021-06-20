@@ -107,6 +107,7 @@ static size_t count_bytes_eq_sse2 (uint8_t const * const src,
       // accumulate, we end up with between 0 and -8 in every accumulator lane.
       acc = _mm_add_epi8(acc, _mm_cmpeq_epi8(matches, input));
     }
+    // Stuff the accumulator into our counters, after taking the absolute value.
     totals = _mm_add_epi64(totals,
                            _mm_sad_epu8(_mm_abs_epi8(acc),
                                         _mm_setzero_si128()));
@@ -159,17 +160,19 @@ size_t count_bytes_eq (uint8_t const * const src,
   uint8_t* ptr = (uint8_t*)&(src[off]);
   // Big strides first, using our SIMD accumulators.
   for (size_t i = 0; i < big_strides; i++) {
-    uint8x16_t acc = vdupq_n_u8(0);
+    int8x16_t acc = vdupq_n_s8(0);
     #pragma GCC unroll 8
     for (size_t j = 0; j < 8; j++) {
       // Load, then compare.
-      // This fills any lane which matches our byte with 0xFF.
-      // We turn this into 0x1 with a right shift by 7 bits.
-      acc = vaddq_u8(acc, vshrq_n_u8(vceqq_u8(vld1q_u8(ptr), matches), 7));
+      // This fills any lane which matches our byte with 0xFF, which is -1.
+      // This means that our accumulator ends up with anything from 0 to -8 at
+      // the end.
+      acc = vaddq_s8(acc, vreinterpretq_s8_u8(vceqq_u8(vld1q_u8(ptr), matches)));
       ptr += 16;
     }
-    // Collect our block accumulator and stuff it into our SIMD counters.
-    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(acc))));
+    // Take an absolute value, reinterpret, then stuff into our SIMD counters.
+    uint8x16_t final = vreinterpretq_u8_s8(vabsq_s8(acc));
+    totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(final))));
   }
   // Evacuate our SIMD counters.
   size_t total = vpaddd_u64(totals);
