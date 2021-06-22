@@ -4,6 +4,57 @@
 #if (__x86_64__ || (__i386__ && __SSE2__))
 #include <emmintrin.h>
 
+#if __AVX2__
+#include <immintrin.h>
+
+static ptrdiff_t find_last_byte_avx2 (uint8_t const * const src,
+                                      size_t const off,
+                                      size_t const len,
+                                      int const byte) {
+  __m256i matches = _mm256_set1_epi8(byte);
+  // Our stride is 8 SIMD registers at a time.
+  // That's 32 bytes times 8 = 256.
+  size_t big_strides = len / 256;
+  size_t small_strides = len % 256;
+  uint8_t* ptr = (uint8_t*)&(src[off + len - 1]);
+  // Big strides first.
+  for (size_t i = 0; i < big_strides; i++) {
+    __m256i results = _mm256_setzero_si256();
+    #pragma GCC unroll 8
+    for (size_t j = 0; j < 8; j++) {
+      // Load and compare. Given that we have 0xFF in any matching lane, by
+      // taking the maximum, we ensure that we keep this information in the
+      // accumulator.
+      __m256i input = _mm256_loadu_si256((__m256i*)(ptr - 31));
+      ptr -= 32;
+      results = _mm256_max_epu8(results, _mm256_cmpeq_epi8(input, matches));
+    }
+    // Evacuate the MSB of each lane. If any bits are set, we found a match
+    // _somewhere_.
+    int result = _mm256_movemask_epi8(results);
+    if (result != 0) {
+      // Reset to the end of the block, then find it manually.
+      ptr += 256;
+      for (size_t j = 0; j < 256; j++) {
+        if ((*ptr) == byte) {
+          return ptr - src;
+        }
+        ptr--;
+      }
+    }
+  }
+  // If we still haven't found anything, finish the rest the slow way.
+  for (size_t i = 0; i < small_strides; i++) {
+    if ((*ptr) == byte) {
+      return ptr - src;
+    }
+    ptr--;
+  }
+  // We failed to find.
+  return -1;
+}
+#endif
+
 static ptrdiff_t find_last_byte_sse2 (uint8_t const * const src,
                                       size_t const off,
                                       size_t const len,
@@ -51,12 +102,27 @@ static ptrdiff_t find_last_byte_sse2 (uint8_t const * const src,
   return -1;
 }
 
+#if __AVX2__
+ptrdiff_t find_last_byte (uint8_t const * const src,
+                          size_t const off,
+                          size_t const len,
+                          int const byte) {
+  __builtin_cpu_init();
+  if (__builtin_cpu_supports("avx2")) {
+    return find_last_byte_avx2(src, off, len, byte);
+  }
+  else {
+    return find_last_byte_sse2(src, off, len, byte);
+  }
+}
+#else
 ptrdiff_t find_last_byte (uint8_t const * const src,
                           size_t const off,
                           size_t const len,
                           int const byte) {
   return find_last_byte_sse2(src, off, len, byte);
 }
+#endif
 
 #elif __ARM_NEON
 #include <arm_neon.h>

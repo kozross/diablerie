@@ -44,7 +44,7 @@ library
     cbits/find-first-byte.c
     cbits/find-last-byte.c
 
-  cc-options:      -msse2 -O2
+  cc-options:      -march=native -O2
   hs-source-dirs:  src
 
 -- Benches
