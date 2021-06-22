@@ -1,7 +1,64 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if __ARM_NEON
+#if (__x86_64__ || (__i386__ && __SSE2__))
+#include <emmintrin.h>
+
+static ptrdiff_t find_last_byte_sse2 (uint8_t const * const src,
+                                      size_t const off,
+                                      size_t const len,
+                                      int const byte) {
+  __m128i matches = _mm_set1_epi8(byte);
+  // Our stride is 8 SIMD registers at a time.
+  // That's 16 bytes times 8 = 128.
+  size_t big_strides = len / 128;
+  size_t small_strides = len % 128;
+  uint8_t* ptr = (uint8_t*)&(src[off + len - 1]);
+  // Big strides first
+  for (size_t i = 0; i < big_strides; i++) {
+    __m128i results = _mm_setzero_si128();
+    #pragma GCC unroll 8
+    for (size_t j = 0; j < 8; j++) {
+      // Load and compare. Given that we have 0xFF in any matching lane, by
+      // taking the maximum, we ensure that we keep this information in the
+      // accumulator.
+      __m128i input = _mm_loadu_si128((__m128i*)(ptr - 15));
+      ptr -= 16;
+      results = _mm_max_epu8(results, _mm_cmpeq_epi8(input, matches));
+    }
+    // Evacuate the MSB of each lane. If any bits are set, we found a match
+    // _somewhere_.
+    int result = _mm_movemask_epi8(results);
+    if (result != 0) {
+      // Reset to the end of the block, then find it manually.
+      ptr += 128;
+      for (size_t j = 0; j < 128; j++) {
+        if ((*ptr) == byte) {
+          return ptr - src;
+        }
+        ptr--;
+      }
+    }
+  }
+  // If we still haven't found anything, finish the rest the slow way.
+  for (size_t i = 0; i < small_strides; i++) {
+    if ((*ptr) == byte) {
+      return ptr - src;
+    }
+    ptr--;
+  }
+  // We failed to find.
+  return -1;
+}
+
+ptrdiff_t find_last_byte (uint8_t const * const src,
+                          size_t const off,
+                          size_t const len,
+                          int const byte) {
+  return find_last_byte_sse2(src, off, len, byte);
+}
+
+#elif __ARM_NEON
 #include <arm_neon.h>
 
 static uint8_t const lookup_table[128] = {
@@ -66,7 +123,6 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
   for (size_t i = 0; i < small_strides; i++) {
     if ((*ptr) == byte) {
       return ptr - src;
-      break;
     }
     ptr--;
   }
@@ -107,7 +163,6 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
   for (size_t i = 0; i < small_strides; i++) {
     if ((*ptr) == byte) {
       return ptr - src;
-      break;
     }
     ptr--;
   }
