@@ -152,7 +152,7 @@ size_t count_bytes_eq (uint8_t const * const src,
     totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(final))));
   }
   // Evacuate our SIMD counters.
-  size_t total = vpaddd_u64(totals);
+  size_t total = vgetq_lane_u64(totals, 0) + vgetq_lane_u64(totals, 1);
   // Finish the job one byte at a time.
   for (size_t i = 0; i < small_strides; i++) {
     if ((*ptr) == byte) {
