@@ -146,6 +146,20 @@ static uint8_t const lookup_table[128] = {
   121, 122, 123, 124, 125, 126, 127, 128
 };
 
+#ifdef __aarch64__
+static inline uint8_t horizontal_max (uint8x16_t src) {
+  return vmaxvq_u8(src);
+}
+#else
+static inline uint8_t horizontal_max (uint8x16_t src) {
+  #pragma GCC unroll 4
+  for (size_t i = 0; i < 4; i++) {
+    src = vpmaxq_u8(src, src);
+  }
+  return vgetq_lane_u8(src, 0);
+}
+#endif
+
 ptrdiff_t find_last_byte (uint8_t const * const src,
                           size_t const off,
                           size_t const len,
@@ -176,11 +190,7 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
       ptr -= 16;
     }
     // Horizontally max the results, then evacuate.
-    #pragma GCC unroll 4
-    for (size_t j = 0; j < 4; j++) {
-      results = vpmaxq_u8(results, results);
-    }
-    ptrdiff_t offset = vgetq_lane_u8(results, 0);
+    ptrdiff_t offset = horizontal_max(results);
     if (offset != 0) {
       return (ptr + offset) - src;
     }
