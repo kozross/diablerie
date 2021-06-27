@@ -44,20 +44,20 @@ cbeTests asBA =
       . assertEqual "countBytesEq" (Naive.countBytesEq asBA <$> everyByte)
       . fmap (countBytesEq asBA)
       $ everyByte,
-    bench "countBytesEq, wrapped" . nf (fmap (countBytesEq asBA)) $ everyByte,
+    bench "countBytesEq, wrapped" . nf (countBytesEq asBA) $ 42,
     bcompare "$NF == \"countBytesEq, wrapped\""
       . bench "countBytesEq, naive"
-      . nf (fmap (Naive.countBytesEq asBA))
-      $ everyByte,
+      . nf (Naive.countBytesEq asBA)
+      $ 42,
     testCase "countBytesEqIn, wrapped, correctness"
       . assertEqual "countBytesEqIn" (Naive.countBytesEqIn asBA 3000000 2000000 <$> everyByte)
       . fmap (countBytesEqIn asBA 3000000 2000000)
       $ everyByte,
-    bench "countBytesEqIn, wrapped" . nf (fmap (countBytesEqIn asBA 3000000 2000000)) $ everyByte,
+    bench "countBytesEqIn, wrapped" . nf (countBytesEqIn asBA 3000000 2000000) $ 42,
     bcompare "$NF == \"countBytesEqIn, wrapped\""
       . bench "countBytesEqIn, naive"
-      . nf (fmap (Naive.countBytesEqIn asBA 3000000 2000000))
-      $ everyByte
+      . nf (Naive.countBytesEqIn asBA 3000000 2000000)
+      $ 42
   ]
 
 ffbTests :: ByteArray -> [Benchmark]
