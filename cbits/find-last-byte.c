@@ -126,25 +126,7 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
 
 #elif __ARM_NEON
 #include <arm_neon.h>
-
-static uint8_t const lookup_table[128] = {
-  1, 2, 3, 4, 5, 6, 7, 8,
-  9, 10, 11, 12, 13, 14, 15, 16,
-  17, 18, 19, 20, 21, 22, 23, 24,
-  25, 26, 27, 28, 29, 30, 31, 32,
-  33, 34, 35, 36, 37, 38, 39, 40,
-  41, 42, 43, 44, 45, 46, 47, 48,
-  49, 50, 51, 52, 53, 54, 55, 56,
-  57, 58, 59, 60, 61, 62, 63, 64,
-  65, 66, 67, 68, 69, 70, 71, 72,
-  73, 74, 75, 76, 77, 78, 79, 80,
-  81, 82, 83, 84, 85, 86, 87, 88,
-  89, 90, 91, 92, 93, 94, 95, 96,
-  97, 98, 99, 100, 101, 102, 103, 104,
-  105, 106, 107, 108, 109, 110, 111, 112,
-  113, 114, 115, 116, 117, 118, 119, 120,
-  121, 122, 123, 124, 125, 126, 127, 128
-};
+#include <stdbool.h>
 
 #ifdef __aarch64__
 static inline uint8_t horizontal_max (uint8x16_t src) {
@@ -164,35 +146,38 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
                           size_t const off,
                           size_t const len,
                           int const byte) {
-  uint8x16_t lookups[8];
-  #pragma GCC unroll 8
-  for (ptrdiff_t i = 0; i < 8; i++) {
-    lookups[i] = vld1q_u8((uint8_t*)(lookup_table + (i * 16)));
-  }
   uint8x16_t matches = vdupq_n_u8(byte);
   // Our stride is 8 SIMD registers at a time.
   // That's 16 bytes times 8 = 128.
   size_t big_strides = len / 128;
   size_t small_strides = len % 128;
-  uint8_t* ptr = (uint8_t*)&(src[off + len - 1]);
+  uint8_t const * ptr = (uint8_t const *)&(src[off + len - 1]);
   // Big strides first.
   for (size_t i = 0; i < big_strides; i++) {
-    __builtin_prefetch(ptr - 64);
     uint8x16_t results = vdupq_n_u8(0);
     #pragma GCC unroll 8
     for (size_t j = 0; j < 8; j++) {
-      // Load and compare. This will zero out anything not found, so we use the
-      // lookup table to compute the offset at which we found each thing.
-      //
-      // We have to use the lookups in reverse, as we're loading backwards.
-      results = vmaxq_u8(results, 
-                         vandq_u8(lookups[7 - j], vceqq_u8(vld1q_u8(ptr - 15), matches)));
+      // Load and compare.
+      // Since we get 0xFF (which is 255) in a matching lane, we can accumulate
+      // using maximum (as we only care if we have a match somewhere).
+      results = vmaxq_u8(results,
+                         vceqq_u8(matches,
+                                  vld1q_u8(ptr - 15)));
       ptr -= 16;
     }
-    // Horizontally max the results, then evacuate.
-    ptrdiff_t offset = horizontal_max(results);
-    if (offset != 0) {
-      return (ptr + offset) - src;
+    // Horizontally max the results. This will be 0 (aka false) if we found no
+    // matches, and 1 (aka true) if we found something.
+    bool any_matches = horizontal_max(results);
+    if (any_matches) {
+      // Reset to the end of the block.
+      ptr += 128;
+      // Dig through the last block by hand.
+      for (size_t j = 0; j < 128; j++) {
+        if ((*ptr) == byte) {
+          return ptr - src;
+        }
+        ptr--;
+      }
     }
   }
   // If we still haven't found anything, finish the rest the slow way.
