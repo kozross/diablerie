@@ -116,7 +116,7 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
 #include <arm_neon.h>
 #include <stdbool.h>
 
-#ifdef __aarch64__
+#if (__ARM_ARCH == 8)
 static inline uint8_t horizontal_max (uint8x16_t src) {
   return vmaxvq_u8(src);
 }

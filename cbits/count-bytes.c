@@ -129,13 +129,12 @@ size_t count_bytes_eq (uint8_t const * const src,
     for (size_t j = 0; j < 8; j++) {
       // Load, then compare.
       // This fills any lane which matches our byte with 0xFF, which is -1.
-      // This means that our accumulator ends up with anything from 0 to -8 at
-      // the end.
-      acc = vaddq_s8(acc, vreinterpretq_s8_u8(vceqq_u8(vld1q_u8(ptr), matches)));
+      // Thus, we can accumulate using _subtraction_.
+      acc = vsubq_s8(acc, vreinterpretq_s8_u8(vceqq_u8(vld1q_u8(ptr), matches)));
       ptr += 16;
     }
-    // Take an absolute value, reinterpret, then stuff into our SIMD counters.
-    uint8x16_t final = vreinterpretq_u8_s8(vabsq_s8(acc));
+    // Reinterpret, then stuff into our SIMD counters.
+    uint8x16_t final = vreinterpretq_u8_s8(acc);
     totals = vaddq_u64(totals, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(final))));
   }
   // Evacuate our SIMD counters.
