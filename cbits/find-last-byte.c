@@ -3,10 +3,9 @@
 
 #if (__x86_64__ || (__i386__ && __SSE2__))
 #include <emmintrin.h>
-
-#if __AVX2__
 #include <immintrin.h>
 
+__attribute__((target("avx,avx2")))
 static ptrdiff_t find_last_byte_avx2 (uint8_t const * const src,
                                       size_t const off,
                                       size_t const len,
@@ -53,7 +52,6 @@ static ptrdiff_t find_last_byte_avx2 (uint8_t const * const src,
   // We failed to find.
   return -1;
 }
-#endif
 
 static ptrdiff_t find_last_byte_sse2 (uint8_t const * const src,
                                       size_t const off,
@@ -102,7 +100,6 @@ static ptrdiff_t find_last_byte_sse2 (uint8_t const * const src,
   return -1;
 }
 
-#if __AVX2__
 ptrdiff_t find_last_byte (uint8_t const * const src,
                           size_t const off,
                           size_t const len,
@@ -115,15 +112,6 @@ ptrdiff_t find_last_byte (uint8_t const * const src,
     return find_last_byte_sse2(src, off, len, byte);
   }
 }
-#else
-ptrdiff_t find_last_byte (uint8_t const * const src,
-                          size_t const off,
-                          size_t const len,
-                          int const byte) {
-  return find_last_byte_sse2(src, off, len, byte);
-}
-#endif
-
 #elif __ARM_NEON
 #include <arm_neon.h>
 #include <stdbool.h>

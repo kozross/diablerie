@@ -3,10 +3,9 @@
 
 #if (__x86_64__ || (__i386__ && __SSE2__))
 #include <emmintrin.h>
-
-#if __AVX2__
 #include <immintrin.h>
 
+__attribute__((target("avx2")))
 static size_t count_bytes_eq_avx2 (uint8_t const * const src,
                                    size_t const off,
                                    size_t const len,
@@ -27,13 +26,13 @@ static size_t count_bytes_eq_avx2 (uint8_t const * const src,
     for (size_t j = 0; j < 8; j++) {
       __m256i input = _mm256_loadu_si256((__m256i*)ptr);
       ptr += 32;
-      // This gives 0xFF in the lane on a match, which is -1. Thus, as we
-      // accumulate, we end up with between 0 and -8 in every accumulator lane.
-      acc = _mm256_add_epi8(acc, _mm256_cmpeq_epi8(matches, input));
+      // This gives 0xFF in the lane on a match, which is -1.
+      // We accumulate using _subtraction_, as x - (- 1) = x + 1.
+      acc = _mm256_sub_epi8(acc, _mm256_cmpeq_epi8(matches, input));
     }
-    // Stuff the accumulator into our counters, after taking the absolute value.
+    // Stuff the accumulator into our counters.
     totals = _mm256_add_epi64(totals, 
-                              _mm256_sad_epu8(_mm256_abs_epi8(acc), 
+                              _mm256_sad_epu8(acc, 
                                               _mm256_setzero_si256()));
   }
   // Evacuate our counters.
@@ -50,7 +49,6 @@ static size_t count_bytes_eq_avx2 (uint8_t const * const src,
   }
   return total;
 }
-#endif
 
 static size_t count_bytes_eq_sse2 (uint8_t const * const src,
                                    size_t const off,
@@ -72,15 +70,13 @@ static size_t count_bytes_eq_sse2 (uint8_t const * const src,
     for (size_t j = 0; j < 8; j++) {
       __m128i input = _mm_loadu_si128((__m128i*)ptr);
       ptr += 16;
-      // This gives 0xFF in the line on a match, which is -1. Thus, as we
-      // accumulate, we end up with between 0 and -8 in every accumulator lane.
-      acc = _mm_add_epi8(acc, _mm_cmpeq_epi8(matches, input));
+      // This gives 0xFF in the line on a match, which is -1.
+      // We accumulate using _subtraction_, as x - (- 1) = x + 1.
+      acc = _mm_sub_epi8(acc, _mm_cmpeq_epi8(matches, input));
     }
     // Stuff the accumulator into our counters.
-    // Since we know the value will be non-positive, we can fake absolute value
-    // with a subtract-from-zero.
     totals = _mm_add_epi64(totals,
-                           _mm_sad_epu8(_mm_sub_epi8(_mm_setzero_si128(), acc),
+                           _mm_sad_epu8(acc,
                                         _mm_setzero_si128()));
   }
   // Evacuate our counters
@@ -98,7 +94,6 @@ static size_t count_bytes_eq_sse2 (uint8_t const * const src,
   return total;
 }
 
-#if __AVX2__
 size_t count_bytes_eq (uint8_t const * const src,
                        size_t const off,
                        size_t const len,
@@ -111,14 +106,6 @@ size_t count_bytes_eq (uint8_t const * const src,
     return count_bytes_eq_sse2(src, off, len, byte);
   }
 }
-#else
-size_t count_bytes_eq (uint8_t const * const src,
-                       size_t const off,
-                       size_t const len,
-                       int const byte) {
-  return count_bytes_eq_sse2(src, off, len, byte);
-}
-#endif
 #elif __ARM_NEON
 #include <arm_neon.h>
 
