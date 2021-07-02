@@ -59,7 +59,7 @@ benchmark benches
     , bytestring   ^>=0.11.1.0
     , linterieur
     , primitive
-    , tasty-bench  ^>=0.2.5
+    , tasty-bench  ^>=0.3
     , tasty-hunit  ^>=0.10.0.3
 
   hs-source-dirs: bench

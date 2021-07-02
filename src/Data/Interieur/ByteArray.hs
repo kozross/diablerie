@@ -17,17 +17,25 @@
 -- of these functions. Use with care.
 module Data.Interieur.ByteArray
   ( -- * Wrapped operations
-    findFirstByte,
-    findFirstByteIn,
-    findLastByte,
-    findLastByteIn,
-    countBytesEq,
-    countBytesEqIn,
+
+    -- ** Search
+    findFirstEq,
+    findFirstEqIn,
+    findLastEq,
+    findLastEqIn,
+
+    -- ** Accumulate
+    countEq,
+    countEqIn,
 
     -- * Raw operations
-    findFirstByteIn#,
-    findLastByteIn#,
-    countBytesEqIn#,
+
+    -- ** Search
+    findFirstEqIn#,
+    findLastEqIn#,
+
+    -- ** Accumulate
+    countEqIn#,
   )
 where
 
@@ -50,14 +58,14 @@ import GHC.Word (Word8 (W8#))
 -- Wrapped ops
 
 -- | A convenience wrapper for searching the entire 'ByteArray'. More precisely,
--- @findFirstByte ba w8@ is the same as @'findFirstByteIn' ba 0 ('sizeofByteArray'
+-- @findFirstEq ba w8@ is the same as @'findFirstEqIn' ba 0 ('sizeofByteArray'
 -- ba) w8@.
 --
 -- @since 1.0.0
-findFirstByte :: ByteArray -> Word8 -> Maybe Int
-findFirstByte ba = findFirstByteIn ba 0 (sizeofByteArray ba)
+findFirstEq :: ByteArray -> Word8 -> Maybe Int
+findFirstEq ba = findFirstEqIn ba 0 (sizeofByteArray ba)
 
--- | Identical to 'findFirstByteIn#', except using lifted types, and using a
+-- | Identical to 'findFirstEqIn#', except using lifted types, and using a
 -- 'Maybe' argument for the result to avoid negative-number indices.
 --
 -- = Prerequisites
@@ -70,17 +78,17 @@ findFirstByte ba = findFirstByteIn ba 0 (sizeofByteArray ba)
 --
 -- = Outcomes
 --
--- Let @res@ be the result of a call @findFirstByteIn ba off len w8@.
+-- Let @res@ be the result of a call @findFirstEqIn ba off len w8@.
 --
 -- * If @w8@ exists in the index range @off .. off + len - 1@, then @res@ will
 --   be in a 'Just' with a value in the range @off .. off + len - 1@
 -- * Otherwise, @res = 'Nothing'@.
 --
 -- @since 1.0.0
-findFirstByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
-findFirstByteIn (ByteArray ba#) off len (W8# w8#) =
+findFirstEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
+findFirstEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CPtrdiff res) =
-        findFirstByteIn#
+        findFirstEqIn#
           ba#
           (fromIntegral off)
           (fromIntegral len)
@@ -90,14 +98,14 @@ findFirstByteIn (ByteArray ba#) off len (W8# w8#) =
         _ -> Just . fromIntegral $ res
 
 -- | A convenience wrapper for searching the entire 'ByteArray'. More precisely,
--- @findLastByte ba w8@ is the same as @'findLastByteIn' ba 0 ('sizeofByteArray'
+-- @findLastEq ba w8@ is the same as @'findLastEqIn' ba 0 ('sizeofByteArray'
 -- ba) w8@.
 --
 -- @since 1.0.0
-findLastByte :: ByteArray -> Word8 -> Maybe Int
-findLastByte ba = findLastByteIn ba 0 (sizeofByteArray ba)
+findLastEq :: ByteArray -> Word8 -> Maybe Int
+findLastEq ba = findLastEqIn ba 0 (sizeofByteArray ba)
 
--- | Identical to 'findLastByteIn#', except using lifted types, and using a
+-- | Identical to 'findLastEqIn#', except using lifted types, and using a
 -- 'Maybe' argument for the result to avoid negative-number indices.
 --
 -- = Prerequisites
@@ -110,17 +118,17 @@ findLastByte ba = findLastByteIn ba 0 (sizeofByteArray ba)
 --
 -- = Outcomes
 --
--- Let @res@ be the result of a call @findLastByteIn ba off len w8@.
+-- Let @res@ be the result of a call @findLastEqIn ba off len w8@.
 --
 -- * If @w8@ exists in the index range @off .. off + len - 1@, then @res@ will
 --   be in a 'Just' with a value in the range @off .. off + len - 1@
 -- * Otherwise, @res = 'Nothing'@.
 --
 -- @since 1.0.0
-findLastByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
-findLastByteIn (ByteArray ba#) off len (W8# w8#) =
+findLastEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
+findLastEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CPtrdiff res) =
-        findLastByteIn#
+        findLastEqIn#
           ba#
           (fromIntegral off)
           (fromIntegral len)
@@ -130,14 +138,14 @@ findLastByteIn (ByteArray ba#) off len (W8# w8#) =
         _ -> Just . fromIntegral $ res
 
 -- | A convenience wrapper for counting the entire 'ByteArray'. More precisely,
--- @countBytesEq ba w8@ is the same as @'countBytesEqIn' ba 0 ('sizeofByteArray' ba)
+-- @countEq ba w8@ is the same as @'countEqIn' ba 0 ('sizeofByteArray' ba)
 -- w8@.
 --
 -- @since 1.0.0
-countBytesEq :: ByteArray -> Word8 -> Int
-countBytesEq ba = countBytesEqIn ba 0 (sizeofByteArray ba)
+countEq :: ByteArray -> Word8 -> Int
+countEq ba = countEqIn ba 0 (sizeofByteArray ba)
 
--- | Identical to 'countBytesEqIn#', except using lifted types.
+-- | Identical to 'countEqIn#', except using lifted types.
 --
 -- = Prerequisites
 --
@@ -149,15 +157,15 @@ countBytesEq ba = countBytesEqIn ba 0 (sizeofByteArray ba)
 --
 -- = Outcomes
 --
--- Let @res@ be the result of a call @countBytesEqIn ba off len w8@.
+-- Let @res@ be the result of a call @countEqIn ba off len w8@.
 --
 -- * @0 '<=' res@ and @res '<' len@.
 --
 -- @since 1.0.0
-countBytesEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
-countBytesEqIn (ByteArray ba#) off len (W8# w8#) =
+countEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
+countEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CInt res) =
-        countBytesEqIn#
+        countEqIn#
           ba#
           (fromIntegral off)
           (fromIntegral len)
@@ -180,19 +188,15 @@ countBytesEqIn (ByteArray ba#) off len (W8# w8#) =
 --
 -- = Outcomes
 --
--- Let @res@ be the result of a call @findFirstByteIn# ba off len w8@.
+-- Let @res@ be the result of a call @findFirstEqIn# ba off len w8@.
 --
 -- * If @w8@ exists in the index range @off .. off + len - 1@, then @res@ will
 --   be in the range @off .. off + len - 1@
 -- * Otherwise, @res = -1@
 --
--- = Notes
---
--- This calls @[memchr](https://man7.org/linux/man-pages/man3/memchr.3.html)@ underneath.
---
 -- @since 1.0.0
 foreign import ccall unsafe "find_first_byte"
-  findFirstByteIn# ::
+  findFirstEqIn# ::
     -- | The memory area to search
     ByteArray# ->
     -- | Offset from the start
@@ -218,7 +222,7 @@ foreign import ccall unsafe "find_first_byte"
 --
 -- = Outcomes
 --
--- Let @res@ be the result of a call @findLastByteIn# ba off len w8@.
+-- Let @res@ be the result of a call @findLastEqIn# ba off len w8@.
 --
 -- * If @w8@ exists in the index range @off .. off + len - 1@, then @res@ will
 --   be in the range @off .. off + len - 1@
@@ -226,7 +230,7 @@ foreign import ccall unsafe "find_first_byte"
 --
 -- @since 1.0.0
 foreign import ccall unsafe "find_last_byte"
-  findLastByteIn# ::
+  findLastEqIn# ::
     -- | The memory area to search
     ByteArray# ->
     -- | Offset from the start
@@ -251,13 +255,13 @@ foreign import ccall unsafe "find_last_byte"
 --
 -- = Outcomes
 --
--- Let @res@ be the result of a call @countBytesEqIn# ba off len w8@.
+-- Let @res@ be the result of a call @countEqIn# ba off len w8@.
 --
 -- * @0 '<=' res@ and @res '<' len@.
 --
 -- @since 1.0.0
 foreign import ccall unsafe "count_bytes_eq"
-  countBytesEqIn# ::
+  countEqIn# ::
     -- | The memory area to count
     ByteArray# ->
     -- | Offset from the start

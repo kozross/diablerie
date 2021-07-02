@@ -1,18 +1,13 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Naive
-  ( findFirstByte,
-    findFirstByteIn,
-    findLastByte,
-    findLastByteIn,
-    countBytesEq,
-    countBytesEqIn,
-    countBitsSet,
-    countBitsSetIn,
+  ( findFirstEq,
+    findFirstEqIn,
+    findLastEq,
+    findLastEqIn,
+    countEq,
+    countEqIn,
   )
 where
 
-import Data.Bits (popCount)
 import Data.Foldable (foldl')
 import Data.Primitive.ByteArray
   ( ByteArray,
@@ -21,8 +16,8 @@ import Data.Primitive.ByteArray
   )
 import Data.Word (Word8)
 
-findFirstByte :: ByteArray -> Word8 -> Maybe Int
-findFirstByte ba w8 = foldl' go Nothing [0 .. sizeofByteArray ba - 1]
+findFirstEq :: ByteArray -> Word8 -> Maybe Int
+findFirstEq ba w8 = foldl' go Nothing [0 .. sizeofByteArray ba - 1]
   where
     go :: Maybe Int -> Int -> Maybe Int
     go acc i = case acc of
@@ -32,8 +27,9 @@ findFirstByte ba w8 = foldl' go Nothing [0 .. sizeofByteArray ba - 1]
           else Nothing
       Just _ -> acc
 
-findLastByte :: ByteArray -> Word8 -> Maybe Int
-findLastByte ba w8 = foldl' go Nothing [sizeofByteArray ba - 1, sizeofByteArray ba - 2 .. 0]
+findLastEq :: ByteArray -> Word8 -> Maybe Int
+findLastEq ba w8 =
+  foldl' go Nothing [sizeofByteArray ba - 1, sizeofByteArray ba - 2 .. 0]
   where
     go :: Maybe Int -> Int -> Maybe Int
     go acc i = case acc of
@@ -43,8 +39,8 @@ findLastByte ba w8 = foldl' go Nothing [sizeofByteArray ba - 1, sizeofByteArray 
           else Nothing
       Just _ -> acc
 
-findFirstByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
-findFirstByteIn ba off len w8 = foldl' go Nothing [off .. off + len - 1]
+findFirstEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
+findFirstEqIn ba off len w8 = foldl' go Nothing [off .. off + len - 1]
   where
     go :: Maybe Int -> Int -> Maybe Int
     go acc i = case acc of
@@ -54,8 +50,9 @@ findFirstByteIn ba off len w8 = foldl' go Nothing [off .. off + len - 1]
           else Nothing
       Just _ -> acc
 
-findLastByteIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
-findLastByteIn ba off len w8 = foldl' go Nothing [off + len - 1, off + len - 2 .. off]
+findLastEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
+findLastEqIn ba off len w8 =
+  foldl' go Nothing [off + len - 1, off + len - 2 .. off]
   where
     go :: Maybe Int -> Int -> Maybe Int
     go acc i = case acc of
@@ -65,30 +62,18 @@ findLastByteIn ba off len w8 = foldl' go Nothing [off + len - 1, off + len - 2 .
           else Nothing
       Just _ -> acc
 
-countBytesEq :: ByteArray -> Word8 -> Int
-countBytesEq ba w8 = sum . fmap go $ [0 .. sizeofByteArray ba - 1]
+countEq :: ByteArray -> Word8 -> Int
+countEq ba w8 = sum . fmap go $ [0 .. sizeofByteArray ba - 1]
   where
     go :: Int -> Int
     go i
       | indexByteArray ba i == w8 = 1
       | otherwise = 0
 
-countBytesEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
-countBytesEqIn ba off len w8 = sum . fmap go $ [off .. off + len - 1]
+countEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
+countEqIn ba off len w8 = sum . fmap go $ [off .. off + len - 1]
   where
     go :: Int -> Int
     go i
       | indexByteArray ba i == w8 = 1
       | otherwise = 0
-
-countBitsSet :: ByteArray -> Int
-countBitsSet ba = sum . fmap go $ [0 .. sizeofByteArray ba - 1]
-  where
-    go :: Int -> Int
-    go = popCount . indexByteArray @Word8 ba
-
-countBitsSetIn :: ByteArray -> Int -> Int -> Int
-countBitsSetIn ba off len = sum . fmap go $ [off .. off + len - 1]
-  where
-    go :: Int -> Int
-    go = popCount . indexByteArray @Word8 ba

@@ -2,12 +2,12 @@ module Main (main) where
 
 import qualified Data.ByteString as BS
 import Data.Interieur.ByteArray
-  ( countBytesEq,
-    countBytesEqIn,
-    findFirstByte,
-    findFirstByteIn,
-    findLastByte,
-    findLastByteIn,
+  ( countEq,
+    countEqIn,
+    findFirstEq,
+    findFirstEqIn,
+    findLastEq,
+    findLastEqIn,
   )
 import Data.Primitive.ByteArray (ByteArray)
 import Data.Word (Word8)
@@ -33,73 +33,73 @@ everyByte = [minBound .. maxBound]
 runAllTests :: ByteArray -> IO ()
 runAllTests asBA =
   defaultMain
-    [ bgroup "findFirstByte (wrapped)" . ffbTests $ asBA,
-      bgroup "findLastByte (wrapped)" . flbTests $ asBA,
-      bgroup "countBytesEq (wrapped)" . cbeTests $ asBA
+    [ bgroup "findFirstEq (wrapped)" . ffeTests $ asBA,
+      bgroup "findLastEq (wrapped)" . fleTests $ asBA,
+      bgroup "countEq (wrapped)" . ceTests $ asBA
     ]
 
-cbeTests :: ByteArray -> [Benchmark]
-cbeTests asBA =
-  [ testCase "countBytesEq, wrapped, correctness"
-      . assertEqual "countBytesEq" (Naive.countBytesEq asBA <$> everyByte)
-      . fmap (countBytesEq asBA)
+ceTests :: ByteArray -> [Benchmark]
+ceTests asBA =
+  [ testCase "countEq, wrapped, correctness"
+      . assertEqual "countEq" (Naive.countEq asBA <$> everyByte)
+      . fmap (countEq asBA)
       $ everyByte,
-    bench "countBytesEq, wrapped" . nf (countBytesEq asBA) $ 42,
-    bcompare "$NF == \"countBytesEq, wrapped\""
-      . bench "countBytesEq, naive"
-      . nf (Naive.countBytesEq asBA)
+    bench "countEq, wrapped" . nf (countEq asBA) $ 42,
+    bcompare "$NF == \"countEq, wrapped\""
+      . bench "countEq, naive"
+      . nf (Naive.countEq asBA)
       $ 42,
-    testCase "countBytesEqIn, wrapped, correctness"
-      . assertEqual "countBytesEqIn" (Naive.countBytesEqIn asBA 3000000 2000000 <$> everyByte)
-      . fmap (countBytesEqIn asBA 3000000 2000000)
+    testCase "countEqIn, wrapped, correctness"
+      . assertEqual "countEqIn" (Naive.countEqIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (countEqIn asBA 3000000 2000000)
       $ everyByte,
-    bench "countBytesEqIn, wrapped" . nf (countBytesEqIn asBA 3000000 2000000) $ 42,
-    bcompare "$NF == \"countBytesEqIn, wrapped\""
-      . bench "countBytesEqIn, naive"
-      . nf (Naive.countBytesEqIn asBA 3000000 2000000)
+    bench "countEqIn, wrapped" . nf (countEqIn asBA 3000000 2000000) $ 42,
+    bcompare "$NF == \"countEqIn, wrapped\""
+      . bench "countEqIn, naive"
+      . nf (Naive.countEqIn asBA 3000000 2000000)
       $ 42
   ]
 
-ffbTests :: ByteArray -> [Benchmark]
-ffbTests asBA =
-  [ testCase "findFirstByte, wrapped, correctness"
-      . assertEqual "findFirstByte" (Naive.findFirstByte asBA <$> everyByte)
-      . fmap (findFirstByte asBA)
+ffeTests :: ByteArray -> [Benchmark]
+ffeTests asBA =
+  [ testCase "findFirstEq, wrapped, correctness"
+      . assertEqual "findFirstEq" (Naive.findFirstEq asBA <$> everyByte)
+      . fmap (findFirstEq asBA)
       $ everyByte,
-    bench "findFirstByte, wrapped" . nf (fmap (findFirstByte asBA)) $ everyByte,
-    bcompare "$NF == \"findFirstByte, wrapped\""
-      . bench "findFirstByte, naive"
-      . nf (fmap (Naive.findFirstByte asBA))
+    bench "findFirstEq, wrapped" . nf (fmap (findFirstEq asBA)) $ everyByte,
+    bcompare "$NF == \"findFirstEq, wrapped\""
+      . bench "findFirstEq, naive"
+      . nf (fmap (Naive.findFirstEq asBA))
       $ everyByte,
-    testCase "findFirstByteIn, wrapped, correctness"
-      . assertEqual "findFirstByteIn" (Naive.findFirstByteIn asBA 3000000 2000000 <$> everyByte)
-      . fmap (findFirstByteIn asBA 3000000 2000000)
+    testCase "findFirstEqIn, wrapped, correctness"
+      . assertEqual "findFirstEqIn" (Naive.findFirstEqIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (findFirstEqIn asBA 3000000 2000000)
       $ everyByte,
-    bench "findFirstByteIn, wrapped" . nf (fmap (findFirstByteIn asBA 3000000 2000000)) $ everyByte,
-    bcompare "$NF == \"findFirstByteIn, wrapped\""
-      . bench "findFirstByteIn, naive"
-      . nf (fmap (Naive.findFirstByteIn asBA 3000000 2000000))
+    bench "findFirstEqIn, wrapped" . nf (fmap (findFirstEqIn asBA 3000000 2000000)) $ everyByte,
+    bcompare "$NF == \"findFirstEqIn, wrapped\""
+      . bench "findFirstEqIn, naive"
+      . nf (fmap (Naive.findFirstEqIn asBA 3000000 2000000))
       $ everyByte
   ]
 
-flbTests :: ByteArray -> [Benchmark]
-flbTests asBA =
-  [ testCase "findLastByte, wrapped, correctness"
-      . assertEqual "findLastByte" (Naive.findLastByte asBA <$> everyByte)
-      . fmap (findLastByte asBA)
+fleTests :: ByteArray -> [Benchmark]
+fleTests asBA =
+  [ testCase "findLastEq, wrapped, correctness"
+      . assertEqual "findLastEq" (Naive.findLastEq asBA <$> everyByte)
+      . fmap (findLastEq asBA)
       $ everyByte,
-    bench "findLastByte, wrapped" . nf (fmap (findLastByte asBA)) $ everyByte,
-    bcompare "$NF == \"findLastByte, wrapped\""
-      . bench "findLastByte, naive"
-      . nf (fmap (Naive.findLastByte asBA))
+    bench "findLastEq, wrapped" . nf (fmap (findLastEq asBA)) $ everyByte,
+    bcompare "$NF == \"findLastEq, wrapped\""
+      . bench "findLastEq, naive"
+      . nf (fmap (Naive.findLastEq asBA))
       $ everyByte,
-    testCase "findLastByteIn, wrapped, correctness"
-      . assertEqual "findLastByteIn" (Naive.findLastByteIn asBA 3000000 2000000 <$> everyByte)
-      . fmap (findLastByteIn asBA 3000000 2000000)
+    testCase "findLastEqIn, wrapped, correctness"
+      . assertEqual "findLastEqIn" (Naive.findLastEqIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (findLastEqIn asBA 3000000 2000000)
       $ everyByte,
-    bench "findLastByteIn, wrapped" . nf (fmap (findLastByteIn asBA 3000000 2000000)) $ everyByte,
-    bcompare "$NF == \"findLastByteIn, wrapped\""
-      . bench "findLastByteIn, naive"
-      . nf (fmap (Naive.findLastByteIn asBA 3000000 2000000))
+    bench "findLastEqIn, wrapped" . nf (fmap (findLastEqIn asBA 3000000 2000000)) $ everyByte,
+    bcompare "$NF == \"findLastEqIn, wrapped\""
+      . bench "findLastEqIn, naive"
+      . nf (fmap (Naive.findLastEqIn asBA 3000000 2000000))
       $ everyByte
   ]
