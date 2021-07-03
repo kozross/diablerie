@@ -13,7 +13,7 @@ import Data.Interieur.ByteArray
   )
 import Data.Primitive.ByteArray (ByteArray)
 import Data.Word (Word8)
-import GHC.Exts (fromListN, toList)
+import GHC.Exts (fromList, fromListN, toList)
 import qualified Naive
 import System.IO (Handle, IOMode (ReadMode), withFile)
 import Test.Tasty.Bench (Benchmark, bcompare, bench, bgroup, defaultMain, nf)
@@ -30,10 +30,7 @@ main = withFile "./bench-data/big.txt" ReadMode go
 -- Helpers
 
 lotsOfZero :: ByteArray
-lotsOfZero = _
-
-lotsOfAscii :: ByteArray
-lotsOfAscii = _
+lotsOfZero = fromList $ replicate 6488665 0 <> [1]
 
 everyByte :: [Word8]
 everyByte = [minBound .. maxBound]
@@ -107,10 +104,10 @@ ffgTests asBA =
       . bench "findFirstGt, 0, naive"
       . nf (Naive.findFirstGt lotsOfZero)
       $ 0,
-    bench "findFirstGt, 127" . nf (findFirstGt lotsOfAscii) $ 127,
+    bench "findFirstGt, 127" . nf (findFirstGt asBA) $ 127,
     bcompare "$NF == \"findFirstGt, 127\""
       . bench "findFirstGt, 127, naive"
-      . nf (Naive.findFirstGt lotsOfAscii)
+      . nf (Naive.findFirstGt asBA)
       $ 127,
     testCase "findFirstGtIn, wrapped, correctness"
       . assertEqual "findFirstGtIn" (Naive.findFirstGtIn asBA 3000000 2000000 <$> everyByte)
@@ -126,10 +123,10 @@ ffgTests asBA =
       . bench "findFirstGtIn, 0, naive"
       . nf (Naive.findFirstGtIn lotsOfZero 3000000 2000000)
       $ 0,
-    bench "findFirstGtIn, 127" . nf (findFirstGtIn lotsOfAscii 3000000 2000000) $ 127,
+    bench "findFirstGtIn, 127" . nf (findFirstGtIn asBA 3000000 2000000) $ 127,
     bcompare "$NF == \"findFirstGtIn, 127\""
       . bench "findFirstGtIn, 127, naive"
-      . nf (Naive.findFirstGtIn lotsOfAscii 3000000 2000000)
+      . nf (Naive.findFirstGtIn asBA 3000000 2000000)
       $ 127
   ]
 

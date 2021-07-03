@@ -54,6 +54,7 @@ benchmark benches
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  ghc-options:    -rtsopts
   other-modules:  Naive
   build-depends:
     , base
