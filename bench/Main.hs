@@ -29,6 +29,12 @@ main = withFile "./bench-data/big.txt" ReadMode go
 
 -- Helpers
 
+lotsOfZero :: ByteArray
+lotsOfZero = _
+
+lotsOfAscii :: ByteArray
+lotsOfAscii = _
+
 everyByte :: [Word8]
 everyByte = [minBound .. maxBound]
 
@@ -96,15 +102,15 @@ ffgTests asBA =
       . bench "findFirstGt, naive"
       . nf (fmap (Naive.findFirstGt asBA))
       $ everyByte,
-    bench "findFirstGt, 0" . nf (findFirstGt asBA) $ 0,
+    bench "findFirstGt, 0" . nf (findFirstGt lotsOfZero) $ 0,
     bcompare "$NF == \"findFirstGt, 0\""
       . bench "findFirstGt, 0, naive"
-      . nf (Naive.findFirstGt asBA)
+      . nf (Naive.findFirstGt lotsOfZero)
       $ 0,
-    bench "findFirstGt, 127" . nf (findFirstGt asBA) $ 127,
+    bench "findFirstGt, 127" . nf (findFirstGt lotsOfAscii) $ 127,
     bcompare "$NF == \"findFirstGt, 127\""
       . bench "findFirstGt, 127, naive"
-      . nf (Naive.findFirstGt asBA)
+      . nf (Naive.findFirstGt lotsOfAscii)
       $ 127,
     testCase "findFirstGtIn, wrapped, correctness"
       . assertEqual "findFirstGtIn" (Naive.findFirstGtIn asBA 3000000 2000000 <$> everyByte)
@@ -115,15 +121,15 @@ ffgTests asBA =
       . bench "findFirstGtIn, naive"
       . nf (fmap (Naive.findFirstGtIn asBA 3000000 2000000))
       $ everyByte,
-    bench "findFirstGtIn, 0" . nf (findFirstGtIn asBA 3000000 2000000) $ 0,
+    bench "findFirstGtIn, 0" . nf (findFirstGtIn lotsOfZero 3000000 2000000) $ 0,
     bcompare "$NF == \"findFirstGtIn, 0\""
       . bench "findFirstGtIn, 0, naive"
-      . nf (Naive.findFirstGtIn asBA 3000000 2000000)
+      . nf (Naive.findFirstGtIn lotsOfZero 3000000 2000000)
       $ 0,
-    bench "findFirstGtIn, 127" . nf (findFirstGtIn asBA 3000000 2000000) $ 127,
+    bench "findFirstGtIn, 127" . nf (findFirstGtIn lotsOfAscii 3000000 2000000) $ 127,
     bcompare "$NF == \"findFirstGtIn, 127\""
       . bench "findFirstGtIn, 127, naive"
-      . nf (Naive.findFirstGtIn asBA 3000000 2000000)
+      . nf (Naive.findFirstGtIn lotsOfAscii 3000000 2000000)
       $ 127
   ]
 
