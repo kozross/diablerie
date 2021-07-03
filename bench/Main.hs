@@ -6,6 +6,8 @@ import Data.Interieur.ByteArray
     countEqIn,
     findFirstEq,
     findFirstEqIn,
+    findFirstGt,
+    findFirstGtIn,
     findLastEq,
     findLastEqIn,
   )
@@ -33,9 +35,10 @@ everyByte = [minBound .. maxBound]
 runAllTests :: ByteArray -> IO ()
 runAllTests asBA =
   defaultMain
-    [ bgroup "findFirstEq (wrapped)" . ffeTests $ asBA,
-      bgroup "findLastEq (wrapped)" . fleTests $ asBA,
-      bgroup "countEq (wrapped)" . ceTests $ asBA
+    [ bgroup "findFirstEq" . ffeTests $ asBA,
+      bgroup "findFirstGt" . ffgTests $ asBA,
+      bgroup "findLastEq" . fleTests $ asBA,
+      bgroup "countEq" . ceTests $ asBA
     ]
 
 ceTests :: ByteArray -> [Benchmark]
@@ -80,6 +83,48 @@ ffeTests asBA =
       . bench "findFirstEqIn, naive"
       . nf (fmap (Naive.findFirstEqIn asBA 3000000 2000000))
       $ everyByte
+  ]
+
+ffgTests :: ByteArray -> [Benchmark]
+ffgTests asBA =
+  [ testCase "findFirstGt, wrapped, correctness"
+      . assertEqual "findFirstGt" (Naive.findFirstGt asBA <$> everyByte)
+      . fmap (findFirstGt asBA)
+      $ everyByte,
+    bench "findFirstGt, wrapped" . nf (fmap (findFirstGt asBA)) $ everyByte,
+    bcompare "$NF == \"findFirstGt, wrapped\""
+      . bench "findFirstGt, naive"
+      . nf (fmap (Naive.findFirstGt asBA))
+      $ everyByte,
+    bench "findFirstGt, 0" . nf (findFirstGt asBA) $ 0,
+    bcompare "$NF == \"findFirstGt, 0\""
+      . bench "findFirstGt, 0, naive"
+      . nf (Naive.findFirstGt asBA)
+      $ 0,
+    bench "findFirstGt, 127" . nf (findFirstGt asBA) $ 127,
+    bcompare "$NF == \"findFirstGt, 127\""
+      . bench "findFirstGt, 127, naive"
+      . nf (Naive.findFirstGt asBA)
+      $ 127,
+    testCase "findFirstGtIn, wrapped, correctness"
+      . assertEqual "findFirstGtIn" (Naive.findFirstGtIn asBA 3000000 2000000 <$> everyByte)
+      . fmap (findFirstGtIn asBA 3000000 2000000)
+      $ everyByte,
+    bench "findFirstGtIn, wrapped" . nf (fmap (findFirstGtIn asBA 3000000 2000000)) $ everyByte,
+    bcompare "$NF == \"findFirstGtIn, wrapped\""
+      . bench "findFirstGtIn, naive"
+      . nf (fmap (Naive.findFirstGtIn asBA 3000000 2000000))
+      $ everyByte,
+    bench "findFirstGtIn, 0" . nf (findFirstGtIn asBA 3000000 2000000) $ 0,
+    bcompare "$NF == \"findFirstGtIn, 0\""
+      . bench "findFirstGtIn, 0, naive"
+      . nf (Naive.findFirstGtIn asBA 3000000 2000000)
+      $ 0,
+    bench "findFirstGtIn, 127" . nf (findFirstGtIn asBA 3000000 2000000) $ 127,
+    bcompare "$NF == \"findFirstGtIn, 127\""
+      . bench "findFirstGtIn, 127, naive"
+      . nf (Naive.findFirstGtIn asBA 3000000 2000000)
+      $ 127
   ]
 
 fleTests :: ByteArray -> [Benchmark]
