@@ -308,7 +308,7 @@ foreign import ccall unsafe "find_first_gt"
 -- * Otherwise, @res = -1@
 --
 -- @since 1.0.0
-foreign import ccall unsafe "find_last_byte"
+foreign import ccall unsafe "find_last_eq"
   findLastEqIn# ::
     -- | The memory area to search
     ByteArray# ->

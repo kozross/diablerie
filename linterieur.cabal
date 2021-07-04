@@ -14,7 +14,7 @@ maintainer:         koz.ross@retro-freedom.nz
 bug-reports:        https://github.com/kozross/linterieur/issues
 copyright:          (C) Koz Ross 2021
 category:           Data
-tested-with:        GHC ==8.6.5 || ==8.8.4 || ==8.10.3 || ==9.0.1
+tested-with:        GHC ==8.6.5 || ==8.8.4 || ==8.10.5 || ==9.0.1
 build-type:         Simple
 extra-source-files:
   bench-data/big.txt
@@ -39,14 +39,40 @@ library
     , base       >=4.12    && <5
     , primitive  ^>=0.7.1.0
 
-  c-sources:
-    cbits/count-bytes.c
-    cbits/find-first-eq.c
-    cbits/find-first-gt.c
-    cbits/find-last-byte.c
+  if (arch(x86_64) || arch(i386))
+    c-sources:
+      cbits/count-bytes.c
+      cbits/find-first-eq.c
+      cbits/find-first-gt.c
+      cbits/find-last-eq-x86.c
+
+  else
+    c-sources:
+      cbits/count-bytes.c
+      cbits/find-first-eq.c
+      cbits/find-first-gt.c
+      cbits/find-last-eq.c
 
   cc-options:      -O2
   hs-source-dirs:  src
+
+-- Tests
+
+test-suite properties
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , base
+    , linterieur
+    , nonempty-vector   ^>=0.2.1.0
+    , primitive
+    , QuickCheck        ^>=2.14.2
+    , tasty             ^>=1.4.1
+    , tasty-quickcheck  ^>=0.10.1.2
+
+  hs-source-dirs: test/properties
 
 -- Benches
 
@@ -58,7 +84,6 @@ benchmark benches
   other-modules:  Naive
   build-depends:
     , base
-    , bytestring   ^>=0.11.1.0
     , deepseq      ^>=1.4.4.0
     , linterieur
     , primitive

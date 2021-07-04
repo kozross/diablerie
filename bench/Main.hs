@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Control.DeepSeq (force)
-import Data.Interieur.ByteArray (findFirstEq)
+import Data.Interieur.ByteArray (findFirstEq, findLastEq)
 import Data.Primitive.ByteArray (ByteArray)
 import GHC.Exts (fromListN)
 import qualified Naive
@@ -18,7 +18,8 @@ import Test.Tasty.Bench
 main :: IO ()
 main =
   defaultMain
-    [ env (pure . force $ (allZero, all42)) (uncurry ffeBenches)
+    [ env (pure . force $ (allZero, all42)) (uncurry ffeBenches),
+      env (pure . force $ (allZero, all42)) (uncurry fleBenches)
     ]
 
 -- Benches
@@ -28,14 +29,30 @@ ffeBenches zeroes fortyTwos =
   bgroup
     "findFirstEq"
     [ bench "0, optimized" . nf (findFirstEq fortyTwos) $ 0,
-      bcompare "$NF == \"0, optimized\""
+      bcompare "$2 == \"findFirstEq\" && $NF == \"0, optimized\""
         . bench "0, naive"
         . nf (Naive.findFirstEq fortyTwos)
         $ 0,
       bench "Other, optimized" . nf (findFirstEq zeroes) $ 42,
-      bcompare "$NF == \"Other, optimized\""
+      bcompare "$2 == \"findFirstEq\" && $NF == \"Other, optimized\""
         . bench "Other, naive"
         . nf (Naive.findFirstEq zeroes)
+        $ 42
+    ]
+
+fleBenches :: ByteArray -> ByteArray -> Benchmark
+fleBenches zeroes fortyTwos =
+  bgroup
+    "findLastEq"
+    [ bench "0, optimized" . nf (findLastEq fortyTwos) $ 0,
+      bcompare "$2 == \"findLastEq\" && $NF == \"0, optimized\""
+        . bench "0, naive"
+        . nf (Naive.findLastEq fortyTwos)
+        $ 0,
+      bench "Other, optimized" . nf (findLastEq zeroes) $ 42,
+      bcompare "$2 == \"findLastEq\" && $NF == \"Other, optimized\""
+        . bench "Other, naive"
+        . nf (Naive.findLastEq zeroes)
         $ 42
     ]
 
