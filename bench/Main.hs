@@ -1,5 +1,56 @@
 module Main (main) where
 
+import Control.DeepSeq (force)
+import Data.Interieur.ByteArray (findFirstEq)
+import Data.Primitive.ByteArray (ByteArray)
+import GHC.Exts (fromListN)
+import qualified Naive
+import Test.Tasty.Bench
+  ( Benchmark,
+    bcompare,
+    bench,
+    bgroup,
+    defaultMain,
+    env,
+    nf,
+  )
+
+main :: IO ()
+main =
+  defaultMain
+    [ env (pure . force $ (allZero, all42)) (uncurry ffeBenches)
+    ]
+
+-- Benches
+
+ffeBenches :: ByteArray -> ByteArray -> Benchmark
+ffeBenches zeroes fortyTwos =
+  bgroup
+    "findFirstEq"
+    [ bench "0, optimized" . nf (findFirstEq fortyTwos) $ 0,
+      bcompare "$NF == \"0, optimized\""
+        . bench "0, naive"
+        . nf (Naive.findFirstEq fortyTwos)
+        $ 0,
+      bench "Other, optimized" . nf (findFirstEq zeroes) $ 42,
+      bcompare "$NF == \"Other, optimized\""
+        . bench "Other, naive"
+        . nf (Naive.findFirstEq zeroes)
+        $ 42
+    ]
+
+-- Helpers
+
+tenMegabytes :: Int
+tenMegabytes = 10 * 1024 * 1024
+
+allZero :: ByteArray
+allZero = fromListN tenMegabytes . replicate tenMegabytes $ 0
+
+all42 :: ByteArray
+all42 = fromListN tenMegabytes . replicate tenMegabytes $ 42
+
+{-
 import qualified Data.ByteString as BS
 import Data.Interieur.ByteArray
   ( countEq,
@@ -151,3 +202,4 @@ fleTests asBA =
       . nf (fmap (Naive.findLastEqIn asBA 3000000 2000000))
       $ everyByte
   ]
+-}

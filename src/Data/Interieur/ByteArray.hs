@@ -239,7 +239,7 @@ countEqIn (ByteArray ba#) off len (W8# w8#) =
 -- * Otherwise, @res = -1@
 --
 -- @since 1.0.0
-foreign import ccall unsafe "find_first_byte"
+foreign import ccall unsafe "find_first_eq"
   findFirstEqIn# ::
     -- | The memory area to search
     ByteArray# ->
