@@ -62,6 +62,10 @@ test-suite properties
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  other-modules:
+    FindFirstGt
+    FindLastEq
+
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base
@@ -84,7 +88,6 @@ benchmark benches
   other-modules:  Naive
   build-depends:
     , base
-    , deepseq      ^>=1.4.4.0
     , linterieur
     , primitive
     , tasty-bench  ^>=0.3
