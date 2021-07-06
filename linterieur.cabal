@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               linterieur
-version:            1.0.0
+version:            1.0
 synopsis:           Basic byte bashing you were missing.
 description:
   A collection of fast, byte-level intrinsic operations. Focused on clarity and
