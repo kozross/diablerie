@@ -43,8 +43,8 @@ library
     c-sources:
       cbits/count-bytes.c
       cbits/find-first-eq.c
-      cbits/find-first-gt.c
-      cbits/find-last-eq-x86.c
+      cbits/x86/find-first-gt.c
+      cbits/x86/find-last-eq.c
 
   else
     c-sources:
