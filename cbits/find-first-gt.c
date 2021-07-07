@@ -131,16 +131,14 @@ static inline ptrdiff_t find_first_non_ascii (uint8_t const * const src,
   uint64_t const mask = broadcast(0x80);
   for (size_t i = 0; i < big_strides; i++) {
     uint64_t const * big_ptr = (uint64_t const *)ptr;
-    // If a byte is larger than 0x7F, it'll have a highest-order set bit. By
-    // ANDing with 0x80 in every 'lane', we get 0x80 in 'lanes' which have
-    // values over 0x7F, and 0x00 otherwise. If we accumulate with bitwise OR,
-    // we preserve any 0x80s anywhere.
-    uint64_t const result = ((*big_ptr) & mask) | 
-                            ((*(big_ptr + 1)) & mask) | 
-                            ((*(big_ptr + 2)) & mask) | 
-                            ((*(big_ptr + 3)) & mask);
+    // If a byte is larger than 0x7F, it'll have a highest-order set bit. 
+    // If we accumulate with bitwise OR, we preserve any MSBs anywhere.
+    uint64_t const result = *big_ptr | 
+                            *(big_ptr + 1) | 
+                            *(big_ptr + 2) | 
+                            *(big_ptr + 3);
     // If we have any set bits, we've found something.
-    if (result != 0) {
+    if ((result & mask) != 0) {
       // Dig manually.
       for (size_t j = 0; j < 32; j++) {
         if ((*ptr) > 0x7F) {
