@@ -339,7 +339,7 @@ foreign import ccall unsafe "find_last_eq"
 -- * @0 '<=' res@ and @res '<' len@.
 --
 -- @since 1.0.0
-foreign import ccall unsafe "count_bytes_eq"
+foreign import ccall unsafe "count_eq"
   countEqIn# ::
     -- | The memory area to count
     ByteArray# ->

@@ -2,7 +2,8 @@
 
 module Main (main) where
 
-import Data.Interieur.ByteArray (findFirstGt, findLastEq)
+import qualified CountEq as CE
+import Data.Interieur.ByteArray (countEq, findFirstGt, findLastEq)
 import qualified FindFirstGt as FFG
 import qualified FindLastEq as FLE
 import Test.QuickCheck (Property, forAllShrink, (===))
@@ -22,10 +23,21 @@ main =
         "findFirstGt"
         [ testProperty "Exclusion" ffgExclusionProp,
           testProperty "Inclusion" ffgInclusionProp
-        ]
+        ],
+      localOption (QuickCheckTests 10000)
+        . testGroup
+          "countEq"
+        $ [ testProperty "Counting" ceCountingProp
+          ]
     ]
 
 -- Helpers
+
+ceCountingProp :: Property
+ceCountingProp = forAllShrink arbitrary shrink go
+  where
+    go :: CE.CountEq -> Property
+    go (CE.CountEq ba w8 count) = countEq ba w8 === count
 
 ffgInclusionProp :: Property
 ffgInclusionProp = forAllShrink arbitrary shrink go

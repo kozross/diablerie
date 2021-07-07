@@ -6,4 +6,4 @@ dist-newstyle
 cabal.project.local*
 .stack-work
 stack.yaml.lock
-cabal.project.local~
+*.csv

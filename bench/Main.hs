@@ -1,6 +1,11 @@
 module Main (main) where
 
-import Data.Interieur.ByteArray (findFirstEq, findFirstGt, findLastEq)
+import Data.Interieur.ByteArray
+  ( countEq,
+    findFirstEq,
+    findFirstGt,
+    findLastEq,
+  )
 import Data.Primitive.ByteArray (ByteArray)
 import GHC.Exts (fromListN)
 import qualified Naive
@@ -18,10 +23,27 @@ main =
   defaultMain
     [ ffeBenches,
       fleBenches,
-      ffgBenches
+      ffgBenches,
+      ceBenches
     ]
 
 -- Benches
+
+ceBenches :: Benchmark
+ceBenches =
+  bgroup
+    "countEq"
+    [ bench "0, optimized" . nf (countEq allZero) $ 0,
+      bcompare "$2 == \"countEq\" && $NF == \"0, optimized\""
+        . bench "0, naive"
+        . nf (Naive.countEq allZero)
+        $ 0,
+      bench "Other, optimized" . nf (countEq all42) $ 42,
+      bcompare "$2 == \"countEq\" && $NF == \"Other, optimized\""
+        . bench "Other, naive"
+        . nf (Naive.countEq all42)
+        $ 42
+    ]
 
 ffeBenches :: Benchmark
 ffeBenches =

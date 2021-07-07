@@ -41,14 +41,14 @@ library
 
   if (arch(x86_64) || arch(i386))
     c-sources:
-      cbits/count-bytes.c
+      cbits/count-eq.c
       cbits/find-first-eq.c
       cbits/x86/find-first-gt.c
       cbits/x86/find-last-eq.c
 
   else
     c-sources:
-      cbits/count-bytes.c
+      cbits/count-eq.c
       cbits/find-first-eq.c
       cbits/find-first-gt.c
       cbits/find-last-eq.c
@@ -63,6 +63,7 @@ test-suite properties
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    CountEq
     FindFirstGt
     FindLastEq
 
@@ -73,6 +74,7 @@ test-suite properties
     , nonempty-vector   ^>=0.2.1.0
     , primitive
     , QuickCheck        ^>=2.14.2
+    , split             ^>=0.2.3.4
     , tasty             ^>=1.4.1
     , tasty-quickcheck  ^>=0.10.1.2
 
