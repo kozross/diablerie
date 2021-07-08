@@ -3,7 +3,7 @@
 module Main (main) where
 
 import qualified CountEq as CE
-import Data.Interieur.ByteArray (countEq, findFirstGt, findLastEq)
+import Data.Diablerie.ByteArray (countEq, findFirstGt, findLastEq)
 import qualified FindFirstGt as FFG
 import qualified FindLastEq as FLE
 import Test.QuickCheck (Property, forAllShrink, (===))

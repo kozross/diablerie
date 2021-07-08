@@ -1,4 +1,4 @@
-packages: ./linterieur.cabal
+packages: ./diablerie.cabal
 
-package linterieur
+package diablerie
   ghc-options: -Werror

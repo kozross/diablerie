@@ -2,7 +2,7 @@
 {-# LANGUAGE UnliftedFFITypes #-}
 
 -- |
--- Module: Data.ByteArray.Interieur
+-- Module: Data.Diablerie.ByteArray
 -- Copyright: (C) 2021 Koz Ross
 -- License: Apache 2.0
 -- Maintainer: Koz Ross <koz.ross@retro-freedom.nz>
@@ -15,7 +15,7 @@
 --
 -- No bounds checking (or indeed, checking of any prerequisites) is done by any
 -- of these functions. Use with care.
-module Data.Interieur.ByteArray
+module Data.Diablerie.ByteArray
   ( -- * Wrapped operations
 
     -- ** Search

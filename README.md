@@ -1,14 +1,30 @@
-# `linterieur` 
+# `diablerie` 
 
 ## What is this thing?
 
 A collection of tools for doing bit-bashing that you didn't realize you needed,
 but aren't (easily) available in Haskell right now.
 
-## How on earth do you pronounce that?
+## What's with the name?
 
-[In the language of
-love](https://translate.google.com/?sl=fr&tl=en&text=l%27int%C3%A9rieur&op=translate).
+Two stories: firstly, a famous line from
+[_Faust_](https://en.wikipedia.org/wiki/Faust_(opera)):
+
+> MEPHISTO: [Aside] Enough of all this academic chatter,
+>   Back again to devilry!
+
+In the original language of love, 'devilry' is
+[_diablerie_](https://translate.google.com/?sl=fr&tl=en&text=diablerie&op=translate).
+Given the desire of this package to _not_ be about academic chatter, the name
+seemed fitting.
+
+Additionally, in [Vampire: The
+Masquerade](https://en.wikipedia.org/wiki/Vampire:_The_Masquerade), 'Diablerie'
+refers to the theft of another vampire's powers for yourself. Given that the
+goal of this project is providing efficient bit bashing (involving
+low-to-the-metal optimizations) to Haskell, the analogy felt fitting. 
+
+Pick whichever explanation you prefer!
 
 ## What are the goals of this project?
 
@@ -32,11 +48,9 @@ the gains are clear to our users, and that we don't have regressions.
 
 ### Portability
 
-While we don't exclude the use of C, we certainly don't want to limit the
-platforms on which this code will run. We don't rule out, for example, more
-efficient SIMDed implementations of these functions hidden behind flags, but we
-don't ever want to require this. If you can get a GHC on the platform, this
-should work too.
+We don't want to limit the platforms on which our code will run in our search
+for efficiency. If you can get a GHC on the platform, `diablerie` should work
+too, and be _fast_ while at it.
 
 ### Clarity
 
@@ -62,7 +76,7 @@ Currently, our CI checks the following versions of GHC:
 
 * 8.6.5
 * 8.8.4
-* 8.10.4
+* 8.10.5
 * 9.0.1
 
 We check on the following platforms:

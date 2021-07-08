@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Data.Interieur.ByteArray
+import Data.Diablerie.ByteArray
   ( countEq,
     findFirstEq,
     findFirstGt,
