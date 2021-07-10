@@ -33,14 +33,9 @@ ceBenches :: Benchmark
 ceBenches =
   bgroup
     "countEq"
-    [ bench "0, optimized" . nf (countEq allZero) $ 0,
-      bcompare "$2 == \"countEq\" && $NF == \"0, optimized\""
-        . bench "0, naive"
-        . nf (Naive.countEq allZero)
-        $ 0,
-      bench "Other, optimized" . nf (countEq all42) $ 42,
-      bcompare "$2 == \"countEq\" && $NF == \"Other, optimized\""
-        . bench "Other, naive"
+    [ bench "Optimized" . nf (countEq all42) $ 42,
+      bcompare "$2 == \"countEq\" && $NF == \"Optimized\""
+        . bench "Naive"
         . nf (Naive.countEq all42)
         $ 42
     ]
