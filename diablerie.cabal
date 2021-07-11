@@ -42,8 +42,8 @@ library
 
   if (arch(x86_64) || arch(i386))
     c-sources:
-      cbits/count-eq.c
       cbits/find-first-eq.c
+      cbits/x86/count-eq.c
       cbits/x86/find-first-gt.c
       cbits/x86/find-last-eq.c
 
