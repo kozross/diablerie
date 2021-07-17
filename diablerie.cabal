@@ -50,7 +50,7 @@ library
   elif (arch(aarch64))
     c-sources:
       cbits/find-first-eq.c
-      cbits/find-first-gt.c
+      cbits/aarch64/find-first-gt.c
       cbits/aarch64/find-last-eq.c
       cbits/aarch64/count-eq.c
 
