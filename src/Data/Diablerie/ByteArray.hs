@@ -19,12 +19,18 @@ module Data.Diablerie.ByteArray
   ( -- * Wrapped operations
 
     -- ** Search
+
+    -- *** Byte
     findFirstEq,
     findFirstEqIn,
     findFirstGt,
     findFirstGtIn,
     findLastEq,
     findLastEqIn,
+
+    -- *** Sequence
+    findFirstMatch,
+    findFirstMatchIn,
 
     -- ** Accumulate
     countEq,
@@ -33,9 +39,14 @@ module Data.Diablerie.ByteArray
     -- * Raw operations
 
     -- ** Search
+
+    -- *** Byte
     findFirstEqIn#,
     findFirstGtIn#,
     findLastEqIn#,
+
+    -- *** Sequence
+    findFirstMatchIn#,
 
     -- ** Accumulate
     countEqIn#,
@@ -64,12 +75,12 @@ import GHC.Word (Word8 (W8#))
 -- @findFirstEq ba w8@ is the same as @'findFirstEqIn' ba 0 ('sizeofByteArray'
 -- ba) w8@.
 --
--- @since 1.0.0
+-- @since 1.0
 findFirstEq :: ByteArray -> Word8 -> Maybe Int
 findFirstEq ba = findFirstEqIn ba 0 (sizeofByteArray ba)
 
 -- | Identical to 'findFirstEqIn#', except using lifted types, and using a
--- 'Maybe' argument for the result to avoid negative-number indices.
+-- 'Maybe' for the result to avoid negative-number indices.
 --
 -- = Prerequisites
 --
@@ -87,7 +98,7 @@ findFirstEq ba = findFirstEqIn ba 0 (sizeofByteArray ba)
 --   be in a 'Just' with a value in the range @off .. off + len - 1@
 -- * Otherwise, @res = 'Nothing'@.
 --
--- @since 1.0.0
+-- @since 1.0
 findFirstEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findFirstEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CPtrdiff res) =
@@ -104,12 +115,12 @@ findFirstEqIn (ByteArray ba#) off len (W8# w8#) =
 -- @findFirstGt ba w8@ is the same as @'findFirstGtIn' ba 0 ('sizeofByteArray'
 -- ba) w8@.
 --
--- @since 1.0.0
+-- @since 1.0
 findFirstGt :: ByteArray -> Word8 -> Maybe Int
 findFirstGt ba = findFirstGtIn ba 0 (sizeofByteArray ba)
 
 -- | Identical to 'findFirstGtIn#', except using lifted types, and using a
--- 'Maybe' argument for the result to avoid negative-number indices.
+-- 'Maybe' for the result to avoid negative-number indices.
 --
 -- = Prerequisites
 --
@@ -123,12 +134,12 @@ findFirstGt ba = findFirstGtIn ba 0 (sizeofByteArray ba)
 --
 -- Let @res@ be the result of a call @findFirstGtIn ba off len w8@.
 --
--- * If @res > -1@, then @'indexByteArray' ba res '>' w8@.
--- * If @res > -1@, then for any @0 <= i < res@, @'indexByteArray' ba i '<='
+-- * If @res > -1@, then @'Data.Primitive.ByteArray.indexByteArray' ba res '>' w8@.
+-- * If @res > -1@, then for any @0 <= i < res@, @'Data.Primitive.ByteArray.indexByteArray' ba i '<='
 --   w8@.
 -- * If @res = -1@, then every byte in @ba@ is equal to, or less than, @w8@.
 --
--- @since 1.0.0
+-- @since 1.0
 findFirstGtIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findFirstGtIn (ByteArray ba#) off len (W8# w8#) =
   let (CPtrdiff res) =
@@ -145,12 +156,12 @@ findFirstGtIn (ByteArray ba#) off len (W8# w8#) =
 -- @findLastEq ba w8@ is the same as @'findLastEqIn' ba 0 ('sizeofByteArray'
 -- ba) w8@.
 --
--- @since 1.0.0
+-- @since 1.0
 findLastEq :: ByteArray -> Word8 -> Maybe Int
 findLastEq ba = findLastEqIn ba 0 (sizeofByteArray ba)
 
 -- | Identical to 'findLastEqIn#', except using lifted types, and using a
--- 'Maybe' argument for the result to avoid negative-number indices.
+-- 'Maybe' for the result to avoid negative-number indices.
 --
 -- = Prerequisites
 --
@@ -168,7 +179,7 @@ findLastEq ba = findLastEqIn ba 0 (sizeofByteArray ba)
 --   be in a 'Just' with a value in the range @off .. off + len - 1@
 -- * Otherwise, @res = 'Nothing'@.
 --
--- @since 1.0.0
+-- @since 1.0
 findLastEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findLastEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CPtrdiff res) =
@@ -181,11 +192,78 @@ findLastEqIn (ByteArray ba#) off len (W8# w8#) =
         (-1) -> Nothing
         _ -> Just . fromIntegral $ res
 
+-- | A convenience wrapper for searching entire 'ByteArray's. More precisely,
+-- @findFirstMatch needle haystack@ is the same as @'findFirstMatchIn needle 0
+-- ('sizeofByteArray' needle) haystack 0 ('sizeofByteArray' haystack).
+--
+-- @since 1.0
+findFirstMatch :: ByteArray -> ByteArray -> Maybe Int
+findFirstMatch needle haystack =
+  findFirstMatchIn
+    needle
+    0
+    (sizeofByteArray needle)
+    haystack
+    0
+    (sizeofByteArray haystack)
+
+-- | Identical to 'findFirstMatchIn#', except using lifted types, and using a
+-- 'Maybe' for the result to avoid negative-number indices.
+--
+-- = Prerequisites
+--
+-- Let @needle@ be the needle argument, @haystack@ be the haystack argument,
+-- @off_n@ and @off_h@ be needle and haystack offsets respectively, and @len_n@
+-- and @len_h@ be needle and haystack lengths respectively.
+--
+-- * @0 '<=' off_n@ and @off_n '<' 'sizeofByteArray' needle@
+-- * @0 '<=' off_h@ and @off_h '<' 'sizeofByteArray' haystack@
+-- * @0 '<=' len_n@ and @len_n + off_n '<=' 'sizeofByteArray' needle@
+-- * @0 '<=' len_h@ and @len_h + off_h '<=' 'sizeofByteArray' haystack@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @findFirstMatchIn needle off_n len_n
+-- haystack off_h len_h@.
+--
+-- * If @len_h = 0@ or @len_n > len_h@, then @res = -1@.
+-- * If @len_n = 0@ and @len_h > 0@, then @res = 0@.
+-- * If there exists @off_h <= i < off_h + len_h - len_n@ such that a
+--   @len_n@-long match of @needle@ from @off_n@ exists in @haystack@ starting
+--   at @i@, then @res@ will be the smallest such @i@.
+-- * Otherwise, @res = -1@.
+--
+-- We observe that this follows the \'prefix rule\': if we find a match at
+-- position @i@, then for any prefix of the needle so matched, we will also find
+-- a match at a position not greater than @i@.
+--
+-- @since 1.0
+findFirstMatchIn ::
+  ByteArray ->
+  Int ->
+  Int ->
+  ByteArray ->
+  Int ->
+  Int ->
+  Maybe Int
+findFirstMatchIn (ByteArray n#) off_n len_n (ByteArray h#) off_h len_h =
+  let (CPtrdiff res) =
+        findFirstMatchIn#
+          n#
+          (fromIntegral off_n)
+          (fromIntegral len_n)
+          h#
+          (fromIntegral off_h)
+          (fromIntegral len_h)
+   in case signum res of
+        (-1) -> Nothing
+        _ -> Just . fromIntegral $ res
+
 -- | A convenience wrapper for counting the entire 'ByteArray'. More precisely,
 -- @countEq ba w8@ is the same as @'countEqIn' ba 0 ('sizeofByteArray' ba)
 -- w8@.
 --
--- @since 1.0.0
+-- @since 1.0
 countEq :: ByteArray -> Word8 -> Int
 countEq ba = countEqIn ba 0 (sizeofByteArray ba)
 
@@ -205,7 +283,7 @@ countEq ba = countEqIn ba 0 (sizeofByteArray ba)
 --
 -- * @0 '<=' res@ and @res '<' len@.
 --
--- @since 1.0.0
+-- @since 1.0
 countEqIn :: ByteArray -> Int -> Int -> Word8 -> Int
 countEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CInt res) =
@@ -226,8 +304,8 @@ countEqIn (ByteArray ba#) off len (W8# w8#) =
 -- Let @off@ be the offset argument, @len@ be the length
 -- argument, @ba@ the 'ByteArray#' argument, and @w8@ the byte to match.
 --
--- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
--- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
+-- * @0 '<=' off@ and @off '<' 'GHC.Exts.sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'GHC.Exts.sizeofByteArray#' ba@
 -- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
@@ -238,7 +316,7 @@ countEqIn (ByteArray ba#) off len (W8# w8#) =
 --   be in the range @off .. off + len - 1@
 -- * Otherwise, @res = -1@
 --
--- @since 1.0.0
+-- @since 1.0
 foreign import ccall unsafe "find_first_eq"
   findFirstEqIn# ::
     -- | The memory area to search
@@ -260,20 +338,20 @@ foreign import ccall unsafe "find_first_eq"
 -- Let @off@ be the offset argument, @len@ be the length
 -- argument, @ba@ the 'ByteArray#' argument, and @w8@ the byte argument.
 --
--- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
--- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
+-- * @0 '<=' off@ and @off '<' 'GHC.Exts.sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'GHC.Exts.sizeofByteArray#' ba@
 -- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
 --
 -- Let @res@ be the result of a call @findFirstGtIn# ba off len w8@.
 --
--- * If @res > -1@, then @'indexByteArray#' ba res '>' w8@.
--- * If @res > -1@, then for any @0 <= i < res@, @'indexByteArray#' ba i '<='
+-- * If @res > -1@, then @'GHC.Exts.indexByteArray#' ba res '>' w8@.
+-- * If @res > -1@, then for any @0 <= i < res@, @'GHC.Exts.indexByteArray#' ba i '<='
 --   w8@.
 -- * If @res = -1@, then every byte in @ba@ is equal to, or less than, @w8@.
 --
--- @since 1.0.0
+-- @since 1.0
 foreign import ccall unsafe "find_first_gt"
   findFirstGtIn# ::
     -- | The memory area to search
@@ -295,8 +373,8 @@ foreign import ccall unsafe "find_first_gt"
 -- Let @off@ be the offset argument, @len@ be the length
 -- argument, @ba@ the 'ByteArray#' argument, and @w8@ the byte to match.
 --
--- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
--- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
+-- * @0 '<=' off@ and @off '<' 'GHC.Exts.sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'GHC.Exts.sizeofByteArray#' ba@
 -- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
@@ -307,7 +385,7 @@ foreign import ccall unsafe "find_first_gt"
 --   be in the range @off .. off + len - 1@
 -- * Otherwise, @res = -1@
 --
--- @since 1.0.0
+-- @since 1.0
 foreign import ccall unsafe "find_last_eq"
   findLastEqIn# ::
     -- | The memory area to search
@@ -321,6 +399,54 @@ foreign import ccall unsafe "find_last_eq"
     -- | Location as index, or -1 if not found
     CPtrdiff
 
+-- | Searches for the first occurrence of a needle in a haystack, with both
+-- needle and haystack given offsets individually.
+--
+-- = Prerequisites
+--
+-- Let @needle@ be the needle argument, @haystack@ be the haystack argument,
+-- @off_n@ and @off_h@ be needle and haystack offsets respectively, and @len_n@
+-- and @len_h@ be needle and haystack lengths respectively.
+--
+-- * @0 '<=' off_n@ and @off_n '<' 'GHC.Exts.sizeofByteArray#' needle@
+-- * @0 '<=' off_h@ and @off_h '<' 'GHC.Exts.sizeofByteArray#' haystack@
+-- * @0 '<=' len_n@ and @len_n + off_n '<=' 'GHC.Exts.sizeofByteArray#' needle@
+-- * @0 '<=' len_h@ and @len_h + off_h '<=' 'GHC.Exts.sizeofByteArray#' haystack@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @findFirstMatchIn# needle off_n len_n
+-- haystack off_h len_h@.
+--
+-- * If @len_h = 0@ or @len_n > len_h@, then @res = -1@.
+-- * If @len_n = 0@ and @len_h > 0@, then @res = 0@.
+-- * If there exists @off_h <= i < off_h + len_h - len_n@ such that a
+--   @len_n@-long match of @needle@ from @off_n@ exists in @haystack@ starting
+--   at @i@, then @res@ will be the smallest such @i@.
+-- * Otherwise, @res = -1@.
+--
+-- We observe that this follows the \'prefix rule\': if we find a match at
+-- position @i@, then for any prefix of the needle so matched, we will also find
+-- a match at a position not greater than @i@.
+--
+-- @since 1.0
+foreign import ccall unsafe "find_first_match"
+  findFirstMatchIn# ::
+    -- | Needle storage
+    ByteArray# ->
+    -- | Needle offset
+    CSize ->
+    -- | Needle length
+    CSize ->
+    -- | Haystack storage
+    ByteArray# ->
+    -- | Haystack offset
+    CSize ->
+    -- | Haystack length
+    CSize ->
+    -- | Location as index, or -1 if not found
+    CPtrdiff
+
 -- | Counts the occurrences of a specific byte in a byte array from an offset.
 --
 -- = Prerequisites
@@ -328,8 +454,8 @@ foreign import ccall unsafe "find_last_eq"
 -- Let @off@ be the offset argument, @len@ be the length argument, @ba@ the
 -- 'ByteArray#' argument, and @w8@ the byte to count.
 --
--- * @0 '<=' off@ and @off '<' 'sizeofByteArray#' ba@
--- * @0 '<=' len@ and @len + off '<=' 'sizeofByteArray#' ba@
+-- * @0 '<=' off@ and @off '<' 'GHC.Exts.sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'GHC.Exts.sizeofByteArray#' ba@
 -- * @0 '<=' w8@ and @w8 '<' 255@
 --
 -- = Outcomes
@@ -338,7 +464,7 @@ foreign import ccall unsafe "find_last_eq"
 --
 -- * @0 '<=' res@ and @res '<' len@.
 --
--- @since 1.0.0
+-- @since 1.0
 foreign import ccall unsafe "count_eq"
   countEqIn# ::
     -- | The memory area to count

@@ -43,22 +43,25 @@ library
   if (arch(x86_64) || arch(i386))
     c-sources:
       cbits/find-first-eq.c
+      cbits/find-first-match.c
       cbits/x86/count-eq.c
       cbits/x86/find-first-gt.c
       cbits/x86/find-last-eq.c
 
-  elif (arch(aarch64))
+  elif arch(aarch64)
     c-sources:
-      cbits/find-first-eq.c
+      cbits/aarch64/count-eq.c
       cbits/aarch64/find-first-gt.c
       cbits/aarch64/find-last-eq.c
-      cbits/aarch64/count-eq.c
+      cbits/find-first-eq.c
+      cbits/find-first-match.c
 
   else
     c-sources:
       cbits/count-eq.c
       cbits/find-first-eq.c
       cbits/find-first-gt.c
+      cbits/find-first-match.c
       cbits/find-last-eq.c
 
   cc-options:      -O2
