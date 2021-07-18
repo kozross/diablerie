@@ -5,6 +5,7 @@ module Naive
     findFirstGtIn,
     findLastEq,
     findLastEqIn,
+    findFirstMatch,
     countEq,
     countEqIn,
   )
@@ -13,6 +14,7 @@ where
 import Data.Foldable (foldl')
 import Data.Primitive.ByteArray
   ( ByteArray,
+    compareByteArrays,
     indexByteArray,
     sizeofByteArray,
   )
@@ -85,6 +87,32 @@ findLastEqIn ba off len w8 =
           then Just i
           else Nothing
       Just _ -> acc
+
+findFirstMatch :: ByteArray -> ByteArray -> Maybe Int
+findFirstMatch needle haystack
+  | sizeofByteArray haystack == 0 = Nothing
+  | sizeofByteArray needle > sizeofByteArray haystack = Nothing
+  | sizeofByteArray needle == 0 = Just 0
+  | otherwise = do
+    let first = indexByteArray needle 0
+    firstIx <- findFirstEq haystack first
+    case sizeofByteArray needle of
+      1 -> pure firstIx
+      _ -> do
+        let off = firstIx
+        let len = sizeofByteArray haystack - off - sizeofByteArray needle - 1
+        go off len
+  where
+    go :: Int -> Int -> Maybe Int
+    go off len
+      | len <= 0 = Nothing
+      | otherwise =
+        case compareByteArrays haystack off needle 0 (sizeofByteArray needle) of
+          EQ -> Just off
+          _ -> do
+            let first = indexByteArray needle 0
+            off' <- findFirstEqIn haystack (off + 1) (len - 1) first
+            go off' (len - (off' - off))
 
 countEq :: ByteArray -> Word8 -> Int
 countEq ba w8 = sum . fmap go $ [0 .. sizeofByteArray ba - 1]

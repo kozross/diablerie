@@ -4,6 +4,7 @@ import Data.Diablerie.ByteArray
   ( countEq,
     findFirstEq,
     findFirstGt,
+    findFirstMatch,
     findLastEq,
   )
 import Data.Primitive.ByteArray (ByteArray)
@@ -24,10 +25,47 @@ main =
     [ ffeBenches,
       fleBenches,
       ffgBenches,
-      ceBenches
+      ceBenches,
+      ffmBenches
     ]
 
 -- Benches
+
+ffmBenches :: Benchmark
+ffmBenches =
+  bgroup
+    "findFirstMatch"
+    [ bench "Optimized (16)" . nf (findFirstMatch a16) $ abab,
+      bcompare "$2 == \"findFirstMatch\" && $NF == \"Optimized (16)\""
+        . bench "Naive (16)"
+        . nf (Naive.findFirstMatch a16)
+        $ abab,
+      bench "Optimized (32)" . nf (findFirstMatch a32) $ abab,
+      bcompare "$2 == \"findFirstMatch\" && $NF == \"Optimized (32)\""
+        . bench "Naive (32)"
+        . nf (Naive.findFirstMatch a32)
+        $ abab,
+      bench "Optimized (64)" . nf (findFirstMatch a64) $ abab,
+      bcompare "$2 == \"findFirstMatch\" && $NF == \"Optimized (64)\""
+        . bench "Naive (64)"
+        . nf (Naive.findFirstMatch a64)
+        $ abab,
+      bench "Optimized (128)" . nf (findFirstMatch a128) $ abab,
+      bcompare "$2 == \"findFirstMatch\" && $NF == \"Optimized (128)\""
+        . bench "Naive (128)"
+        . nf (Naive.findFirstMatch a128)
+        $ abab,
+      bench "Optimized (256)" . nf (findFirstMatch a256) $ abab,
+      bcompare "$2 == \"findFirstMatch\" && $NF == \"Optimized (256)\""
+        . bench "Naive (256)"
+        . nf (Naive.findFirstMatch a256)
+        $ abab,
+      bench "Optimized (272)" . nf (findFirstMatch a272) $ abab,
+      bcompare "$2 == \"findFirstMatch\" && $NF == \"Optimized (272)\""
+        . bench "Naive (272)"
+        . nf (Naive.findFirstMatch a272)
+        $ abab
+    ]
 
 ceBenches :: Benchmark
 ceBenches =
@@ -102,6 +140,34 @@ fleBenches =
 
 tenMegabytes :: Int
 tenMegabytes = 10 * 1024 * 1024
+
+sixtyFourK :: Int
+sixtyFourK = 64 * 1024
+
+a16 :: ByteArray
+a16 = fromListN 16 . replicate 16 $ 97
+
+a32 :: ByteArray
+a32 = a16 <> a16
+
+a64 :: ByteArray
+a64 = a32 <> a32
+
+a128 :: ByteArray
+a128 = a64 <> a64
+
+a256 :: ByteArray
+a256 = a128 <> a128
+
+a272 :: ByteArray
+a272 = a256 <> a16
+
+abab :: ByteArray
+abab =
+  fromListN sixtyFourK
+    . take sixtyFourK
+    . cycle
+    $ [97, 98]
 
 allZero :: ByteArray
 allZero = fromListN tenMegabytes . replicate tenMegabytes $ 0
