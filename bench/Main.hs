@@ -141,9 +141,6 @@ fleBenches =
 tenMegabytes :: Int
 tenMegabytes = 10 * 1024 * 1024
 
-sixtyFourK :: Int
-sixtyFourK = 64 * 1024
-
 a16 :: ByteArray
 a16 = fromListN 16 . replicate 16 $ 97
 
@@ -164,8 +161,8 @@ a272 = a256 <> a16
 
 abab :: ByteArray
 abab =
-  fromListN sixtyFourK
-    . take sixtyFourK
+  fromListN tenMegabytes
+    . take tenMegabytes
     . cycle
     $ [97, 98]
 
