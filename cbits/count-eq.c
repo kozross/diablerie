@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+// Fill every 8 byte 'lane' with the same value.
 static inline uint64_t broadcast (uint8_t const byte) {
   return byte * 0x0101010101010101ULL;
 }
