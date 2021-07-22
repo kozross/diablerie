@@ -49,33 +49,45 @@ static inline ptrdiff_t mula (uint8_t const * const needle,
   uint64_t const mask_low_bits = broadcast(0x7F);
   uint64_t const mask_ones = broadcast(0x01);
   uint64_t const mask_highest = broadcast(0x80);
-  uint64_t const * ptr_first = (uint64_t const *)haystack;
-  uint64_t const * ptr_last = (uint64_t const *)(haystack + needle_len - 1);
-  for (size_t i = 0; i < haystack_len; i += 8) {
+  // Our stride is 8 bytes at a time.
+  size_t const big_strides = (haystack_len - needle_len + 1) / 8;
+  size_t const small_strides = (haystack_len - needle_len + 1) % 8;
+  uint8_t const * ptr = (uint8_t const *)haystack;
+  for (size_t i = 0; i < big_strides; i++) {
+    uint64_t const * ptr_first = (uint64_t const*)ptr;
+    uint64_t const * ptr_last = (uint64_t const*)(ptr + needle_len - 1);
     uint64_t const matches = ((*ptr_first) ^ mask_first) | ((*ptr_last) ^ mask_last);
     uint64_t const temp = (~matches & mask_low_bits) + mask_ones;
     uint64_t const temp2 = ~matches & mask_highest;
     uint64_t zeroes = temp & temp2;
+    // Internal byte counter.
     size_t j = 0;
     while (zeroes != 0) {
       // Check if we have a high bit set in our byte, indicating a match at both
       // ends.
       if ((zeroes & 0x80) != 0) {
-        // Since we already know that we match at both ends, we only need to
-        // check the parts in the middle.
-        uint8_t const * ptr = (uint8_t const *)(ptr_first) + j + 1;
-        if (memcmp(ptr, needle + 1, needle_len - 2) == 0) {
+        // Since we already know we match at both ends, we only need to check
+        // the parts in the middle.
+        uint8_t const * check_ptr = ptr + j + 1;
+        if (memcmp(check_ptr, needle + 1, needle_len - 2) == 0) {
           // Found at this position, offset by j bytes.
           return i + j;
         }
       }
       // Shift out a byte.
       zeroes >>= 8;
-      // Indicate that it's the next byte we're interested in.
+      // Indicate we skipped a byte.
       j++;
     }
-    ptr_first++;
-    ptr_last++;
+    // Stride forward.
+    ptr += 8;
+  }
+  // If we got this far, check what remains using the naive method.
+  for (size_t i = 0; i < small_strides; i++) {
+    if (memcmp(ptr, needle, needle_len) == 0) {
+      return ptr - haystack;
+    }
+    ptr++;
   }
   // We failed to find.
   return -1;
@@ -95,6 +107,13 @@ ptrdiff_t find_first_match (uint8_t const * const needle,
   }
   uint8_t const * needle_start = &(needle[needle_off]);
   uint8_t const * haystack_start = &(haystack[haystack_off]);
+  if (needle_len == haystack_len) {
+    // Do one memcmp to check. This will immediately tell us the answer.
+    if (memcmp(haystack_start, needle_start, needle_len) == 0) {
+      return 0;
+    }
+    return -1;
+  }
   // Skip ourselves forward to the first match to the beginning of our needle.
   uint8_t const * ptr = memchr(haystack_start, 
                                needle_start[0], 

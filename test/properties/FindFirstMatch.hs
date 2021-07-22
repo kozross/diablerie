@@ -42,7 +42,7 @@ instance Arbitrary Prefix where
     case prefixContents of
       [] -> empty
       (_ : _) -> do
-        newPrefixLen <- [0 .. length prefixContents]
+        newPrefixLen <- [0 .. length prefixContents - 1]
         pure . Prefix needle haystack
           . fromList
           . take newPrefixLen
