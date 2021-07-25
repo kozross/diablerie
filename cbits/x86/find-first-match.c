@@ -3,6 +3,12 @@
 #include <string.h>
 #include <emmintrin.h>
 
+// Shifts an SSE register right by one.
+static inline __m128i shift_right_one_bit (__m128i const src) {
+  return _mm_or_si128(_mm_slli_epi64(src, 1),
+                      _mm_srli_epi64(_mm_slli_si128(src, 8), 63));
+}
+
 // Based on
 // https://mischasan.wordpress.com/2012/02/04/sse2-and-bndm-string-search, but
 // with code you can actually read.
@@ -15,7 +21,7 @@ static inline ptrdiff_t bndm (uint8_t const * const needle,
     // Set the bit corresponding to the byte at i, in LSB order.
     compiled[needle[i]] |= (1UL << (needle_len - 1UL - i));
   }
-  int remaining = 0;
+  size_t remaining = 0;
   for (size_t i = 0; i <= (haystack_len - needle_len); i += remaining) {
     // Get the mask corresponding to the _last_ byte.
     uint64_t mask = compiled[haystack[i + needle_len - 1]];
@@ -32,6 +38,64 @@ static inline ptrdiff_t bndm (uint8_t const * const needle,
     }
   }
   // We failed to find anything.
+  return -1;
+}
+
+// Based on
+// https://mischasan.wordpress.com/2012/02/04/sse2-and-bndm-string-search/#comment-258,
+// but with code you can actually read.
+static inline ptrdiff_t bndm_sse2 (uint8_t const * const needle,
+                                   size_t const needle_len,
+                                   uint8_t const * haystack,
+                                   size_t const haystack_len) {
+  int8_t used[256] = {};
+  __m128i compiled[256];
+  for (size_t i = 0; i < needle_len; i++) {
+    uint8_t const j = needle[i];
+    if (used[j] == 0) {
+      used[j] = 1;
+      compiled[j] = _mm_setzero_si128();
+    }
+    // Set the bit corresponding to the byte at i, in LSB order.
+    uint32_t * ptr = (uint32_t*)&(compiled[j]);
+    size_t ix = 127 - i;
+    ptr[ix >> 5] |= (1U << (ix & 31));
+  }
+  size_t remaining = 0;
+  for (size_t i = 0; i <= (haystack_len - needle_len); i += remaining) {
+    size_t j = needle_len - 1;
+    remaining = needle_len - 1;
+    if (used[haystack[i + j]] == 0) {
+      // We never saw this, so we know we can't find anything here.
+      continue;
+    }
+    // Due to the above check, this is guaranteed non-zero.
+    __m128i mask = compiled[haystack[i + j]];
+    do {
+      int16_t moved = _mm_movemask_epi8(mask);
+      // Do we have a high-order set bit?
+      if (0 > moved) {
+        // Is there more to check?
+        if (j != 0) {
+          remaining = j;
+        }
+        // If we checked everything, we found a match.
+        else {
+          return i;
+        }
+      }
+      j--;
+      // Same as before - if we never saw this symbol, we can't possibly match.
+      if (used[haystack[i + j]] == 0) {
+        break;
+      }
+      // Shift along and AND with the mask for the preceding character. This
+      // will only be nonzero if we have a match. 
+      mask = _mm_and_si128(shift_right_one_bit(mask), compiled[haystack[i + j]]);
+    }
+    while (0xFFFF != _mm_movemask_epi8(_mm_cmpeq_epi8(mask, _mm_setzero_si128())));
+  }
+  // If we get this far, we missed.
   return -1;
 }
 
@@ -112,6 +176,10 @@ ptrdiff_t find_first_match (uint8_t const * const needle,
   // If it's not too long, use BNDM.
   if (needle_len <= 64) {
     result = bndm(needle_start, needle_len, ptr, remaining);
+  }
+  // If it's a bit longer, use SSE-based BNDM.
+  else if (needle_len <= 128) {
+    result = bndm_sse2(needle_start, needle_len, ptr, remaining);
   }
   // Otherwise, use Mula.
   else {
