@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <emmintrin.h>
 
 // Based on
 // https://mischasan.wordpress.com/2012/02/04/sse2-and-bndm-string-search, but
@@ -34,53 +35,34 @@ static inline ptrdiff_t bndm (uint8_t const * const needle,
   return -1;
 }
 
-// Fill every 8-bit 'lane' with the same value.
-static inline uint64_t broadcast (uint8_t const byte) {
-  return byte * 0x0101010101010101ULL;
-}
-
-// Based on http://0x80.pl/articles/simd-strfind.html#swar
-static inline ptrdiff_t mula (uint8_t const * const needle,
-                              size_t const needle_len,
-                              uint8_t const * haystack,
-                              size_t const haystack_len) {
-  uint64_t const mask_first = broadcast(needle[0]);
-  uint64_t const mask_last = broadcast(needle[needle_len - 1]);
-  uint64_t const mask_low_bits = broadcast(0x7F);
-  uint64_t const mask_ones = broadcast(0x01);
-  uint64_t const mask_highest = broadcast(0x80);
-  // Our stride is 8 bytes at a time.
-  size_t const big_strides = (haystack_len - needle_len + 1) / 8;
-  size_t const small_strides = (haystack_len - needle_len + 1) % 8;
+// Based on http://0x80.pl/articles/simd-strfind.html#sse-avx2
+static inline ptrdiff_t mula_sse2 (uint8_t const * const needle,
+                                   size_t const needle_len,
+                                   uint8_t const * haystack,
+                                   size_t const haystack_len) {
+  __m128i const mask_first = _mm_set1_epi8(needle[0]);
+  __m128i const mask_last = _mm_set1_epi8(needle[needle_len - 1]);
+  // Our stride is 16 bytes at a time.
+  size_t const big_strides = (haystack_len - needle_len + 1) / 16;
+  size_t const small_strides = (haystack_len - needle_len + 1) % 16;
   uint8_t const * ptr = (uint8_t const *)haystack;
   for (size_t i = 0; i < big_strides; i++) {
-    uint64_t const * ptr_first = (uint64_t const*)ptr;
-    uint64_t const * ptr_last = (uint64_t const*)(ptr + needle_len - 1);
-    uint64_t const matches = ((*ptr_first) ^ mask_first) | ((*ptr_last) ^ mask_last);
-    uint64_t const temp = (~matches & mask_low_bits) + mask_ones;
-    uint64_t const temp2 = ~matches & mask_highest;
-    uint64_t zeroes = temp & temp2;
-    // Internal byte counter.
-    size_t j = 0;
-    while (zeroes != 0) {
-      // Check if we have a high bit set in our byte, indicating a match at both
-      // ends.
-      if ((zeroes & 0x80) != 0) {
-        // Since we already know we match at both ends, we only need to check
-        // the parts in the middle.
-        uint8_t const * check_ptr = ptr + j + 1;
-        if (memcmp(check_ptr, needle + 1, needle_len - 2) == 0) {
-          // Found at this position, offset by j bytes.
-          return (i * 8) + j;
-        }
+    __m128i const input_start = 
+      _mm_loadu_si128((__m128i const *)ptr);
+    __m128i const input_end = 
+      _mm_loadu_si128((__m128i const *)(ptr + needle_len - 1));
+    uint16_t results = 
+      _mm_movemask_epi8(_mm_and_si128(_mm_cmpeq_epi8(input_start, mask_first),
+                                      _mm_cmpeq_epi8(input_end, mask_last)));
+    while (results != 0) {
+      size_t pos = __builtin_ctz(results);
+      if (memcmp(ptr + pos + 1, needle + 1, needle_len - 2) == 0) {
+        return (i * 16) + pos;
       }
-      // Shift out a byte.
-      zeroes >>= 8;
-      // Indicate we skipped a byte.
-      j++;
+      // Clear the bit we just found if we missed.
+      results &= (results - 1);
     }
-    // Stride forward.
-    ptr += 8;
+    ptr += 16;
   }
   // If we got this far, check what remains using the naive method.
   for (size_t i = 0; i < small_strides; i++) {
@@ -89,7 +71,7 @@ static inline ptrdiff_t mula (uint8_t const * const needle,
     }
     ptr++;
   }
-  // We failed to find.
+  // We missed.
   return -1;
 }
 
@@ -133,10 +115,10 @@ ptrdiff_t find_first_match (uint8_t const * const needle,
   }
   // Otherwise, use Mula.
   else {
-    result = mula(needle_start, needle_len, ptr, remaining);
+    result = mula_sse2(needle_start, needle_len, ptr, remaining);
   }
   if (result == -1) {
-    // We failed to find.
+    // We missed.
     return -1;
   }
   return (ptr - haystack) + result;
