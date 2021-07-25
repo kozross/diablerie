@@ -71,7 +71,7 @@ static inline ptrdiff_t mula (uint8_t const * const needle,
         uint8_t const * check_ptr = ptr + j + 1;
         if (memcmp(check_ptr, needle + 1, needle_len - 2) == 0) {
           // Found at this position, offset by j bytes.
-          return i + j;
+          return (i * 8) + j;
         }
       }
       // Shift out a byte.
