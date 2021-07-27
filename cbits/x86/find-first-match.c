@@ -4,6 +4,13 @@
 #include <emmintrin.h>
 #include <immintrin.h>
 
+// Shifts an AVX register right by one.
+__attribute__((target("avx,avx2")))
+static inline __m256i shift_right_one_bit_avx2 (__m256i const src) {
+  return _mm256_or_si256(_mm256_slli_epi64(src, 1),
+                         _mm256_srli_epi64(_mm256_slli_si256(src, 8), 63));
+}
+
 // Shifts an SSE register right by one.
 static inline __m128i shift_right_one_bit (__m128i const src) {
   return _mm_or_si128(_mm_slli_epi64(src, 1),
@@ -44,6 +51,68 @@ static inline ptrdiff_t bndm (uint8_t const * const needle,
 
 // Based on
 // https://mischasan.wordpress.com/2012/02/04/sse2-and-bndm-string-search/#comment-258,
+// but with code you can actually read, and using AVX registers.
+__attribute__((target("avx,avx2")))
+static inline ptrdiff_t bndm_avx2 (uint8_t const * const needle,
+                                   size_t const needle_len,
+                                   uint8_t const * haystack,
+                                   size_t const haystack_len) {
+  int8_t used[256] = {};
+  __m256i compiled[256];
+  for (size_t i = 0; i < needle_len; i++) {
+    uint8_t const j = needle[i];
+    if (used[j] == 0) {
+      used[j] = 1;
+      compiled[j] = _mm256_setzero_si256();
+    }
+    // Set the bit corresponding to the byte at i, in LSB order.
+    uint32_t* ptr = (uint32_t*)&(compiled[j]);
+    size_t ix = 255 - i;
+    ptr[ix >> 5] |= (1U << (ix & 31));
+  }
+  size_t remaining = 0;
+  for (size_t i = 0; i <= (haystack_len - needle_len); i += remaining) {
+    size_t j = needle_len - 1;
+    remaining = needle_len - 1;
+    if (used[haystack[i + j]] == 0) {
+      // We never saw this, so we know we can't find anything here.
+      continue;
+    }
+    // Due to the above check, this is guaranteed non-zero.
+    __m256i mask = compiled[haystack[i + j]];
+    do {
+      int32_t moved = _mm256_movemask_epi8(mask);
+      // Do we have a high-order set bit?
+      if (0 > moved) {
+        // Is there more to check?
+        if (j != 0) {
+          remaining = j;
+        }
+        // If we checked everything, we found a match.
+        else {
+          return i;
+        }
+      }
+      j--;
+      // Same as before - if we never saw this symbol, we can't possibly match.
+      if (used[haystack[i + j]] == 0) {
+        break;
+      }
+      // Shift along and AND with the mask for the preceding character. This
+      // will only be nonzero if we have a match.
+      mask = _mm256_and_si256(shift_right_one_bit_avx2(mask),
+                              compiled[haystack[i + j]]);
+    }
+    while (0xFFFFFFFF != (uint32_t)(_mm256_movemask_epi8(
+                                    _mm256_cmpeq_epi8(mask, 
+                                                      _mm256_setzero_si256()))));
+  }
+  // If we get this far, we missed.
+  return -1;
+}
+
+// Based on
+// https://mischasan.wordpress.com/2012/02/04/sse2-and-bndm-string-search/#comment-258,
 // but with code you can actually read.
 static inline ptrdiff_t bndm_sse2 (uint8_t const * const needle,
                                    size_t const needle_len,
@@ -58,7 +127,7 @@ static inline ptrdiff_t bndm_sse2 (uint8_t const * const needle,
       compiled[j] = _mm_setzero_si128();
     }
     // Set the bit corresponding to the byte at i, in LSB order.
-    uint32_t * ptr = (uint32_t*)&(compiled[j]);
+    uint32_t* ptr = (uint32_t*)&(compiled[j]);
     size_t ix = 127 - i;
     ptr[ix >> 5] |= (1U << (ix & 31));
   }
@@ -219,6 +288,30 @@ ptrdiff_t find_first_match (uint8_t const * const needle,
   if (needle_len <= 64) {
     result = bndm(needle_start, needle_len, ptr, remaining);
   }
+  else {
+    __builtin_cpu_init();
+    if (__builtin_cpu_supports("avx2")) {
+      // If it's a bit longer, use AVX-based BNDM.
+      if (needle_len <= 256) {
+        result = bndm_avx2(needle_start, needle_len, ptr, remaining);
+      }
+      // Otherwise, use AVX Mula.
+      else {
+        result = mula_avx2(needle_start, needle_len, ptr, remaining);
+      }
+    }
+    else {
+      // If it's a bit longer, use SSE-based BNDM.
+      if (needle_len <= 128) {
+        result = bndm_sse2(needle_start, needle_len, ptr, remaining);
+      }
+      // Otherwise, use SSE Mula.
+      else {
+        result = mula_sse2(needle_start, needle_len, ptr, remaining);
+      }
+    }
+  }
+  /*
   // If it's a bit longer, use SSE-based BNDM.
   else if (needle_len <= 128) {
     result = bndm_sse2(needle_start, needle_len, ptr, remaining);
@@ -233,6 +326,7 @@ ptrdiff_t find_first_match (uint8_t const * const needle,
       result = mula_sse2(needle_start, needle_len, ptr, remaining);
     }
   }
+  */
   if (result == -1) {
     // We missed.
     return -1;
