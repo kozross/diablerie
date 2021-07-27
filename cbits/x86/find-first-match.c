@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <emmintrin.h>
+#include <immintrin.h>
 
 // Shifts an SSE register right by one.
 static inline __m128i shift_right_one_bit (__m128i const src) {
@@ -100,6 +101,47 @@ static inline ptrdiff_t bndm_sse2 (uint8_t const * const needle,
 }
 
 // Based on http://0x80.pl/articles/simd-strfind.html#sse-avx2
+__attribute__((target("avx,avx2")))
+static inline ptrdiff_t mula_avx2 (uint8_t const * const needle,
+                                   size_t const needle_len,
+                                   uint8_t const * haystack,
+                                   size_t const haystack_len) {
+  __m256i const mask_first = _mm256_set1_epi8(needle[0]);
+  __m256i const mask_last = _mm256_set1_epi8(needle[needle_len - 1]);
+  // Our stride is 32 bytes at a time.
+  size_t const big_strides = (haystack_len - needle_len + 1) / 32;
+  size_t const small_strides = (haystack_len - needle_len + 1) % 32;
+  uint8_t const * ptr = (uint8_t const *)haystack;
+  for (size_t i = 0; i < big_strides; i++) {
+    __m256i const input_start = 
+      _mm256_loadu_si256((__m256i const *)ptr);
+    __m256i const input_end = 
+      _mm256_loadu_si256((__m256i const *)(ptr + needle_len - 1));
+    uint32_t results = 
+      _mm256_movemask_epi8(_mm256_and_si256(_mm256_cmpeq_epi8(input_start, mask_first),
+                                            _mm256_cmpeq_epi8(input_end, mask_last)));
+    while (results != 0) {
+      size_t pos = __builtin_ctz(results);
+      if (memcmp(ptr + pos + 1, needle + 1, needle_len - 2) == 0) {
+        return (i * 32) + pos;
+      }
+      // Clear the bit we just found if we missed.
+      results &= (results - 1);
+    }
+    ptr += 32;
+  }
+  // If we got this far, check what remains using the naive method.
+  for (size_t i = 0; i < small_strides; i++) {
+    if (memcmp(ptr, needle, needle_len) == 0) {
+      return ptr - haystack;
+    }
+    ptr++;
+  }
+  // We missed.
+  return -1;
+}
+
+// Based on http://0x80.pl/articles/simd-strfind.html#sse-avx2
 static inline ptrdiff_t mula_sse2 (uint8_t const * const needle,
                                    size_t const needle_len,
                                    uint8_t const * haystack,
@@ -183,7 +225,13 @@ ptrdiff_t find_first_match (uint8_t const * const needle,
   }
   // Otherwise, use Mula.
   else {
-    result = mula_sse2(needle_start, needle_len, ptr, remaining);
+    __builtin_cpu_init();
+    if (__builtin_cpu_supports("avx2")) {
+      result = mula_avx2(needle_start, needle_len, ptr, remaining);
+    }
+    else {
+      result = mula_sse2(needle_start, needle_len, ptr, remaining);
+    }
   }
   if (result == -1) {
     // We missed.
