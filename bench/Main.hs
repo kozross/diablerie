@@ -5,6 +5,7 @@ import Data.Diablerie.ByteArray
     findFirstEq,
     findFirstGt,
     findFirstMatch,
+    findFirstNe,
     findLastEq,
   )
 import Data.Primitive.ByteArray (ByteArray)
@@ -23,6 +24,7 @@ main :: IO ()
 main =
   defaultMain
     [ ffeBenches,
+      ffnBenches,
       fleBenches,
       ffgBenches,
       ceBenches,
@@ -91,6 +93,22 @@ ffeBenches =
       bcompare "$2 == \"findFirstEq\" && $NF == \"Other, optimized\""
         . bench "Other, naive"
         . nf (Naive.findFirstEq allZero)
+        $ 42
+    ]
+
+ffnBenches :: Benchmark
+ffnBenches =
+  bgroup
+    "findFirstNe"
+    [ bench "0, optimized" . nf (findFirstNe allZero) $ 0,
+      bcompare "$2 == \"findFirstNe\" && $NF == \"0, optimized\""
+        . bench "0, naive"
+        . nf (Naive.findFirstNe allZero)
+        $ 0,
+      bench "Other, optimized" . nf (findFirstNe all42) $ 42,
+      bcompare "$2 == \"findFirstNe\" && $NF == \"Other, optimized\""
+        . bench "Other, naive"
+        . nf (Naive.findFirstNe all42)
         $ 42
     ]
 
