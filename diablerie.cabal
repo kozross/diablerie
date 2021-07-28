@@ -43,6 +43,7 @@ library
   if (arch(x86_64) || arch(i386))
     c-sources:
       cbits/find-first-eq.c
+      cbits/find-first-ne.c
       cbits/x86/count-eq.c
       cbits/x86/find-first-gt.c
       cbits/x86/find-first-match.c
@@ -52,9 +53,10 @@ library
     c-sources:
       cbits/aarch64/count-eq.c
       cbits/aarch64/find-first-gt.c
+      cbits/aarch64/find-first-match.c
       cbits/aarch64/find-last-eq.c
       cbits/find-first-eq.c
-      cbits/aarch64/find-first-match.c
+      cbits/find-first-ne.c
 
   else
     c-sources:
@@ -62,6 +64,7 @@ library
       cbits/find-first-eq.c
       cbits/find-first-gt.c
       cbits/find-first-match.c
+      cbits/find-first-ne.c
       cbits/find-last-eq.c
 
   cc-options:      -O2
@@ -77,6 +80,7 @@ test-suite properties
     CountEq
     FindFirstGt
     FindFirstMatch
+    FindFirstNe
     FindLastEq
 
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N

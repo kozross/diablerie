@@ -7,10 +7,12 @@ import Data.Diablerie.ByteArray
   ( countEq,
     findFirstGt,
     findFirstMatch,
+    findFirstNe,
     findLastEq,
   )
 import qualified FindFirstGt as FFG
 import qualified FindFirstMatch as FFM
+import qualified FindFirstNe as FFN
 import qualified FindLastEq as FLE
 import Test.QuickCheck (Property, forAllShrink, (.&&.), (=/=), (===))
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
@@ -21,6 +23,11 @@ main :: IO ()
 main =
   defaultMain . localOption (QuickCheckTests 100000) . testGroup "Properties" $
     [ testGroup
+        "findFirstNe"
+        [ testProperty "Exclusion" ffnExclusionProp,
+          testProperty "Inclusion" ffnInclusionProp
+        ],
+      testGroup
         "findLastEq"
         [ testProperty "Exclusion" fleExclusionProp,
           testProperty "Inclusion" fleInclusionProp
@@ -45,6 +52,20 @@ main =
     ]
 
 -- Helpers
+
+ffnExclusionProp :: Property
+ffnExclusionProp = forAllShrink arbitrary shrink go
+  where
+    go :: FFN.Exclusion -> Property
+    go (FFN.Exclusion ba w8) =
+      findFirstNe ba w8 === Nothing
+
+ffnInclusionProp :: Property
+ffnInclusionProp = forAllShrink arbitrary shrink go
+  where
+    go :: FFN.Inclusion -> Property
+    go (FFN.Inclusion ba w8 ix) =
+      findFirstNe ba w8 === Just ix
 
 ffmPrefixProp :: Property
 ffmPrefixProp = forAllShrink arbitrary shrink go

@@ -23,6 +23,8 @@ module Data.Diablerie.ByteArray
     -- *** Byte
     findFirstEq,
     findFirstEqIn,
+    findFirstNe,
+    findFirstNeIn,
     findFirstGt,
     findFirstGtIn,
     findLastEq,
@@ -42,6 +44,7 @@ module Data.Diablerie.ByteArray
 
     -- *** Byte
     findFirstEqIn#,
+    findFirstNeIn#,
     findFirstGtIn#,
     findLastEqIn#,
 
@@ -103,6 +106,47 @@ findFirstEqIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
 findFirstEqIn (ByteArray ba#) off len (W8# w8#) =
   let (CPtrdiff res) =
         findFirstEqIn#
+          ba#
+          (fromIntegral off)
+          (fromIntegral len)
+          (word2Int# w8#)
+   in case signum res of
+        (-1) -> Nothing
+        _ -> Just . fromIntegral $ res
+
+-- | A convenience wrapper for searching the entire 'ByteArray'. More precisely,
+-- @findFirstNe ba w8@ is the same as @'findFirstNeIn' ba 0 ('sizeofByteArray'
+-- ba) w8@.
+--
+-- @since 1.0
+findFirstNe :: ByteArray -> Word8 -> Maybe Int
+findFirstNe ba = findFirstNeIn ba 0 (sizeofByteArray ba)
+
+-- | Identical to 'findFirstNeIn#', except using lifted types, and using a
+-- 'Maybe' for the result to avoid negative-number indices.
+--
+-- = Prerequisites
+--
+-- Let @off@ be the offset argument, @len@ be the length
+-- argument, @ba@ the 'ByteArray' argument, and @w8@ the byte to differ from.
+--
+-- * @0 '<=' off@ and @off '<' 'sizeofByteArray' ba@
+-- * @0 '<=' len@ and @len + off <= 'sizeofByteArray' ba@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @findFirstEqIn ba off len w8@.
+--
+-- * If a byte different to @w8@ exists in the index range @off .. off + len -
+--   1@, then @res@ will be 'Just' the index of the first such byte, in the
+--   range @off .. off + len - 1@
+-- * Otherwise, @res = 'Nothing'@.
+--
+-- @since 1.0
+findFirstNeIn :: ByteArray -> Int -> Int -> Word8 -> Maybe Int
+findFirstNeIn (ByteArray ba#) off len (W8# w8#) =
+  let (CPtrdiff res) =
+        findFirstNeIn#
           ba#
           (fromIntegral off)
           (fromIntegral len)
@@ -313,7 +357,7 @@ countEqIn (ByteArray ba#) off len (W8# w8#) =
 -- Let @res@ be the result of a call @findFirstEqIn# ba off len w8@.
 --
 -- * If @w8@ exists in the index range @off .. off + len - 1@, then @res@ will
---   be in the range @off .. off + len - 1@
+--   be the index of the first match, in the range @off .. off + len - 1@
 -- * Otherwise, @res = -1@
 --
 -- @since 1.0
@@ -326,6 +370,41 @@ foreign import ccall unsafe "find_first_eq"
     -- | How many bytes to check
     CSize ->
     -- | What byte to match (only low 8 bits)
+    Int# ->
+    -- | Location as index, or -1 if not found
+    CPtrdiff
+
+-- | Searches a byte array from an offset for the index of the
+-- first non-occurrence of a byte.
+--
+-- = Prerequisites
+--
+-- Let @off@ be the offset argument, @len@ be the length
+-- argument, @ba@ the 'ByteArray#' argument, and @w8@ the byte to differ from.
+--
+-- * @0 '<=' off@ and @off '<' 'GHC.Exts.sizeofByteArray#' ba@
+-- * @0 '<=' len@ and @len + off '<=' 'GHC.Exts.sizeofByteArray#' ba@
+-- * @0 '<=' w8@ and @w8 '<' 255@
+--
+-- = Outcomes
+--
+-- Let @res@ be the result of a call @findFirstEqIn# ba off len w8@.
+--
+-- * If a byte different to @w8@ exists in the index range @off .. off + len -
+--   1@, then @res@ will be the index of the first such byte, in the range @off
+--   .. off + len - 1@
+-- * Otherwise, @res = -1@.
+--
+-- @since 1.0
+foreign import ccall unsafe "find_first_ne"
+  findFirstNeIn# ::
+    -- | The memory area to search
+    ByteArray# ->
+    -- | Offset from the start
+    CSize ->
+    -- | How many bytes to check
+    CSize ->
+    -- | What byte to differ from (only low 8 bits)
     Int# ->
     -- | Location as index, or -1 if not found
     CPtrdiff
