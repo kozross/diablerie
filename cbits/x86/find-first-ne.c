@@ -10,7 +10,6 @@ static inline ptrdiff_t find_first_nonzero_sse2 (uint8_t const * const src,
   size_t const big_strides = len / 128;
   size_t const small_strides = len % 128;
   uint8_t const * ptr = (uint8_t const *)&(src[off]);
-  __m128i all_ones = _mm_set1_epi8(0xFF);
   for (size_t i = 0; i < big_strides; i++) {
     // We read, and OR together, all eight reads. If this is nonzero, then there
     // was a nonzero byte somewhere.
@@ -24,15 +23,10 @@ static inline ptrdiff_t find_first_nonzero_sse2 (uint8_t const * const src,
                                              _mm_loadu_si128(big_ptr + 5)),
                                 _mm_or_si128(_mm_loadu_si128(big_ptr + 6),
                                              _mm_loadu_si128(big_ptr + 7))));
-    // Compare inequal with zero will leave 0xFF in any byte that's not zero.
-    // If we evacuate the MSBs, we will have all-zero if we found no mismatches,
-    // and something else otherwise.
-    //
-    // Since SSE has no NEQ instruction, we do an equality with 0, then XOR with
-    // all-1s.
-    __m128i cond = _mm_xor_si128(all_ones,
-        _mm_cmpeq_epi8(results, _mm_setzero_si128()));
-    if (_mm_movemask_epi8(cond) != 0) {
+    // Compare with zero will put 0xFF into matching bytes. Thus, if we evacuate
+    // the MSBs, any unset ones means we found something else.
+    __m128i cond = _mm_cmpeq_epi8(results, _mm_setzero_si128());
+    if (_mm_movemask_epi8(cond) != 0xFFFF) {
       // Dig manually.
       for (size_t j = 0; j < 128; j++) {
         if ((*ptr) != 0) {
