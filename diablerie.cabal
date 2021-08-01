@@ -56,7 +56,7 @@ library
       cbits/aarch64/find-first-match.c
       cbits/aarch64/find-last-eq.c
       cbits/find-first-eq.c
-      cbits/find-first-ne.c
+      cbits/aarch64/find-first-ne.c
 
   else
     c-sources:
