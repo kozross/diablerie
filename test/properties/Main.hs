@@ -6,11 +6,13 @@ import qualified CountEq as CE
 import Data.Diablerie.ByteArray
   ( countEq,
     findFirstGt,
+    findFirstLt,
     findFirstMatch,
     findFirstNe,
     findLastEq,
   )
 import qualified FindFirstGt as FFG
+import qualified FindFirstLt as FFL
 import qualified FindFirstMatch as FFM
 import qualified FindFirstNe as FFN
 import qualified FindLastEq as FLE
@@ -21,7 +23,7 @@ import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
 
 main :: IO ()
 main =
-  defaultMain . localOption (QuickCheckTests 100000) . testGroup "Properties" $
+  defaultMain . localOption (QuickCheckTests 10000) . testGroup "Properties" $
     [ testGroup
         "findFirstNe"
         [ testProperty "Exclusion" ffnExclusionProp,
@@ -37,12 +39,17 @@ main =
         [ testProperty "Exclusion" ffgExclusionProp,
           testProperty "Inclusion" ffgInclusionProp
         ],
-      localOption (QuickCheckTests 10000)
+      testGroup
+        "findFirstLt"
+        [ testProperty "Exclusion" fflExclusionProp,
+          testProperty "Inclusion" fflInclusionProp
+        ],
+      localOption (QuickCheckTests 1000)
         . testGroup
           "countEq"
         $ [ testProperty "Counting" ceCountingProp
           ],
-      localOption (QuickCheckTests 50000)
+      localOption (QuickCheckTests 5000)
         . testGroup
           "findFirstMatch"
         $ [ testProperty "Exclusion" ffmExclusionProp,
@@ -52,6 +59,20 @@ main =
     ]
 
 -- Helpers
+
+fflExclusionProp :: Property
+fflExclusionProp = forAllShrink arbitrary shrink go
+  where
+    go :: FFL.Exclusion -> Property
+    go (FFL.Exclusion ba w8) =
+      findFirstLt ba w8 === Nothing
+
+fflInclusionProp :: Property
+fflInclusionProp = forAllShrink arbitrary shrink go
+  where
+    go :: FFL.Inclusion -> Property
+    go (FFL.Inclusion ba w8 ix) =
+      findFirstLt ba w8 === Just ix
 
 ffnExclusionProp :: Property
 ffnExclusionProp = forAllShrink arbitrary shrink go

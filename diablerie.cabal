@@ -43,6 +43,7 @@ library
   if (arch(x86_64) || arch(i386))
     c-sources:
       cbits/find-first-eq.c
+      cbits/find-first-lt.c
       cbits/x86/count-eq.c
       cbits/x86/find-first-gt.c
       cbits/x86/find-first-match.c
@@ -56,6 +57,7 @@ library
       cbits/aarch64/find-first-match.c
       cbits/aarch64/find-last-eq.c
       cbits/find-first-eq.c
+      cbits/find-first-lt.c
       cbits/find-first-ne.c
 
   else
@@ -63,6 +65,7 @@ library
       cbits/count-eq.c
       cbits/find-first-eq.c
       cbits/find-first-gt.c
+      cbits/find-first-lt.c
       cbits/find-first-match.c
       cbits/find-first-ne.c
       cbits/find-last-eq.c
@@ -79,6 +82,7 @@ test-suite properties
   other-modules:
     CountEq
     FindFirstGt
+    FindFirstLt
     FindFirstMatch
     FindFirstNe
     FindLastEq
@@ -87,7 +91,6 @@ test-suite properties
   build-depends:
     , base
     , diablerie
-    , nonempty-vector   ^>=0.2.1.0
     , primitive
     , QuickCheck        ^>=2.14.2
     , split             ^>=0.2.3.4
