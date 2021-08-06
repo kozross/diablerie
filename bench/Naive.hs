@@ -4,6 +4,7 @@ module Naive
     findFirstNe,
     findFirstGt,
     findFirstGtIn,
+    findFirstLt,
     findLastEq,
     findLastEqIn,
     findFirstMatch,
@@ -50,6 +51,17 @@ findFirstGt ba w8 = foldl' go Nothing [0 .. sizeofByteArray ba - 1]
     go acc i = case acc of
       Nothing ->
         if indexByteArray ba i > w8
+          then Just i
+          else Nothing
+      Just _ -> acc
+
+findFirstLt :: ByteArray -> Word8 -> Maybe Int
+findFirstLt ba w8 = foldl' go Nothing [0 .. sizeofByteArray ba - 1]
+  where
+    go :: Maybe Int -> Int -> Maybe Int
+    go acc i = case acc of
+      Nothing ->
+        if indexByteArray ba i < w8
           then Just i
           else Nothing
       Just _ -> acc

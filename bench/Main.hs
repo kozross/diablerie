@@ -4,6 +4,7 @@ import Data.Diablerie.ByteArray
   ( countEq,
     findFirstEq,
     findFirstGt,
+    findFirstLt,
     findFirstMatch,
     findFirstNe,
     findLastEq,
@@ -27,11 +28,23 @@ main =
       ffnBenches,
       fleBenches,
       ffgBenches,
+      fflBenches,
       ceBenches,
       ffmBenches
     ]
 
 -- Benches
+
+fflBenches :: Benchmark
+fflBenches =
+  bgroup
+    "findFirstLt"
+    [ bench "Optimized" . nf (findFirstLt all42) $ 42,
+      bcompare "$2 == \"findFirstLt\" && $NF == \"Optimized\""
+        . bench "Naive"
+        . nf (Naive.findFirstLt all42)
+        $ 42
+    ]
 
 ffmBenches :: Benchmark
 ffmBenches =
