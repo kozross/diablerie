@@ -39,9 +39,14 @@ fflBenches :: Benchmark
 fflBenches =
   bgroup
     "findFirstLt"
-    [ bench "Optimized" . nf (findFirstLt all42) $ 42,
-      bcompare "$2 == \"findFirstLt\" && $NF == \"Optimized\""
-        . bench "Naive"
+    [ bench "Optimized, 1" . nf (findFirstLt all1) $ 1,
+      bcompare "$2 == \"findFirstLt\" && $NF == \"Optimized, 1\""
+        . bench "Naive, 1"
+        . nf (Naive.findFirstLt all1)
+        $ 1,
+      bench "Optimized, other" . nf (findFirstLt all42) $ 42,
+      bcompare "$2 == \"findFirstLt\" && $NF == \"Optimized, other\""
+        . bench "Naive, other"
         . nf (Naive.findFirstLt all42)
         $ 42
     ]
@@ -199,6 +204,9 @@ abab =
 
 allZero :: ByteArray
 allZero = fromListN tenMegabytes . replicate tenMegabytes $ 0
+
+all1 :: ByteArray
+all1 = fromListN tenMegabytes . replicate tenMegabytes $ 1
 
 all42 :: ByteArray
 all42 = fromListN tenMegabytes . replicate tenMegabytes $ 42
