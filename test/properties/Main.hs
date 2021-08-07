@@ -3,14 +3,14 @@
 module Main (main) where
 
 import qualified CountEq as CE
-import Data.Diablerie.ByteArray
+import Data.Diablerie.Byte
   ( countEq,
     findFirstGt,
     findFirstLt,
-    findFirstMatch,
     findFirstNe,
     findLastEq,
   )
+import Data.Diablerie.Sequence (findFirstMatch)
 import qualified FindFirstGt as FFG
 import qualified FindFirstLt as FFL
 import qualified FindFirstMatch as FFM

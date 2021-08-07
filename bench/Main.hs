@@ -1,14 +1,14 @@
 module Main (main) where
 
-import Data.Diablerie.ByteArray
+import Data.Diablerie.Byte
   ( countEq,
     findFirstEq,
     findFirstGt,
     findFirstLt,
-    findFirstMatch,
     findFirstNe,
     findLastEq,
   )
+import Data.Diablerie.Sequence (findFirstMatch)
 import Data.Primitive.ByteArray (ByteArray)
 import GHC.Exts (fromListN)
 import qualified Naive

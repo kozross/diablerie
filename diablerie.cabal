@@ -27,7 +27,7 @@ common lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wredundant-constraints
-    -Wmissing-export-lists
+    -Wmissing-export-lists -Wmissing-deriving-strategies
 
   default-language: Haskell2010
 
@@ -35,10 +35,14 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Data.Diablerie.ByteArray
+  exposed-modules:
+    Data.Diablerie.Byte
+    Data.Diablerie.Sequence
+    Data.Diablerie.Swar
+
   build-depends:
     , base       >=4.12    && <5
-    , primitive  ^>=0.7.1.0
+    , primitive  ^>=0.7.2.0
 
   if (arch(x86_64) || arch(i386))
     c-sources:
