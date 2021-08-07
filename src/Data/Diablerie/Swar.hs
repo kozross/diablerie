@@ -1,8 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UnboxedTuples #-}
 
 -- |
@@ -25,17 +26,22 @@ module Data.Diablerie.Swar
     broadcast,
     zeroes,
     ones,
+    lowBits,
+    highBits,
 
     -- ** Comparisons
     compareEq,
+    compareNe,
 
-    -- ** Processing
+    -- ** Evacuation
+    extractHighBits,
+
+    -- ** Bulk processing
     foldSwar,
   )
 where
 
-import Data.Bits (complement, xor, (.&.), (.|.))
-import Data.Int (Int64)
+import Data.Bits (Bits (complement, xor, (.&.), (.|.)), FiniteBits)
 import Data.Kind (Type)
 import Data.Primitive.ByteArray
   ( ByteArray,
@@ -43,16 +49,23 @@ import Data.Primitive.ByteArray
     sizeofByteArray,
   )
 import Data.Primitive.Types (Prim)
-import Data.Word (Word64, Word8)
+import GHC.Exts (pext64#)
+import GHC.Word (Word64 (W64#), Word8 (W8#))
 
--- | A wrapper for viewing a 'Word64' as eight lanes, each comprised of 8 bits.
+-- | A wrapper for viewing a 'Word64' as eight lanes, each comprised of a
+-- 'Word8'.
 --
 -- @since 1.0
 newtype Laned8 = Laned8 Word64
   deriving
     ( -- | @since 1.0
       Eq,
-      Prim
+      -- | @since 1.0
+      Prim,
+      -- | @since 1.0
+      Bits,
+      -- | @since 1.0
+      FiniteBits
     )
     via Word64
   deriving stock
@@ -68,6 +81,7 @@ newtype Laned8 = Laned8 Word64
 -- * 'zeroes'
 -- * 'ones'
 -- * 'lowBits'
+-- * 'highBits'
 --
 -- @since 1.0
 {-# INLINE broadcast #-}
@@ -84,13 +98,19 @@ zeroes = Laned8 0
 --
 -- @since 1.0
 ones :: Laned8
-ones = Laned8 . fromIntegral @Int64 $ (-1)
+ones = Laned8 0xFFFFFFFFFFFFFFFF
 
 -- | Broadcast @0x7F@ to every lane.
 --
 -- @since 1.0
 lowBits :: Laned8
 lowBits = Laned8 0x7F7F7F7F7F7F7F7F
+
+-- | Broadcast @0x80@ to every lane.
+--
+-- @since 1.0
+highBits :: Laned8
+highBits = Laned8 0x8080808080808080
 
 -- | Compare corresponding lanes in both arguments. Return a new 'Laned8' where
 -- the corresponding lane contains @0x80@ if the lanes of the arguments matched,
@@ -104,6 +124,30 @@ compareEq (Laned8 w) (Laned8 w') =
       Laned8 mask = lowBits
       tmp = (smashed .&. mask) + mask
    in Laned8 $ complement (tmp .|. smashed .|. mask)
+
+-- | Compare corresponding lanes in both arguments. Return a new 'Laned8' where
+-- the corresponding lane contains @0x80@ if the lanes of the arguments didn't
+-- match, and @0x00@ otherwise.
+--
+-- @since 1.0
+{-# INLINE compareNe #-}
+compareNe :: Laned8 -> Laned8 -> Laned8
+compareNe (Laned8 w) (Laned8 w') =
+  let smashed = w `xor` w'
+      Laned8 mask = lowBits
+      tmp = (smashed .&. mask) + mask
+   in Laned8 $ mask `xor` (tmp .|. smashed .|. mask)
+
+-- | Similar to the @movemask@ operations provided by the Intel SIMD instruction
+-- sets. Collects the high-order bits (set or not), and packs them into a
+-- 'Word8'.
+--
+-- @since 1.0
+{-# INLINE extractHighBits #-}
+extractHighBits :: Laned8 -> Word8
+extractHighBits (Laned8 (W64# w#)) =
+  let !(Laned8 (W64# mask#)) = highBits
+   in W8# (pext64# w# mask#)
 
 -- | Given a means to process an entire block of 8 bytes into a 'Monoid', as
 -- well as a way to handle leftovers, collapse an entire 'ByteArray' into that
