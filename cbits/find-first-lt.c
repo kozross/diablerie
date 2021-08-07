@@ -19,30 +19,34 @@ static inline uint64_t broadcast (uint8_t const x) {
 static inline ptrdiff_t find_first_zero (uint8_t const * const src,
                                          size_t const off,
                                          size_t const len) {
-  size_t const big_strides = len / 16;
-  size_t const little_strides = len % 16;
+  size_t const big_strides = len / 32;
+  size_t const little_strides = len % 32;
   uint8_t const * ptr = (uint8_t const *)&(src[off]);
   uint64_t const mask_01 = broadcast(0x01);
   uint64_t const mask_80 = broadcast(0x80);
   for (size_t i = 0; i < big_strides; i++) {
     uint64_t const * big_ptr = (uint64_t const *)ptr;
-    uint64_t const inputs[2] = {
+    uint64_t const inputs[4] = {
       *big_ptr,
-      *(big_ptr + 1)
+      *(big_ptr + 1),
+      *(big_ptr + 2),
+      *(big_ptr + 3)
     };
-    uint64_t const results[2] = {
+    uint64_t const results[4] = {
       (((inputs[0]) - mask_01) & ~inputs[0] & mask_80) != 0,
-      (((inputs[1]) - mask_01) & ~inputs[1] & mask_80) != 0 
+      (((inputs[1]) - mask_01) & ~inputs[1] & mask_80) != 0, 
+      (((inputs[2]) - mask_01) & ~inputs[2] & mask_80) != 0,
+      (((inputs[3]) - mask_01) & ~inputs[3] & mask_80) != 0 
     };
-    if (results[0] || results[1]) {
-      for (size_t j = 0; j < 16; j++) {
+    if (results[0] || results[1] || results[2] || results [3]) {
+      for (size_t j = 0; j < 32; j++) {
         if ((*ptr) == 0) {
           return ptr - src;
         }
         ptr++;
       }
     } else {
-      ptr += 16;
+      ptr += 32;
     }
   }
   for (size_t i = 0; i < little_strides; i++) {
